@@ -1,0 +1,20 @@
+# Node.js bağımlılıkları
+frontend/node_modules/
+
+# Backend içindeki veriler
+backend/data/
+
+# Raporlar
+Futbol Ml Dashboard Raporu.pdf
+
+# Python dosyaları
+**/python files/
+
+**/node_modules/
+
+# Python bytecode dosyaları
+**/__pycache__/
+**/*.py[cod]
+
+# Ortam dosyaları
+*.env

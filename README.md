@@ -1,36 +1,64 @@
- 
-# Futbol İstatistik Dashboard ve Tahmin Modelleri
+# Futbol İstatistik Dashboard
 
-Bu proje, geçmiş futbol maç verilerini kullanarak kapsamlı bir istatistiksel gösterim panosu (dashboard) oluşturmayı ve lig bazlı tahmin modelleri geliştirerek bunları kullanıcı dostu bir "Forecast" sekmesinde sunmayı amaçlayan iki aşamalı bir uygulamadır.
+Bu proje, geçmiş futbol maç verilerini kullanarak kapsamlı bir **istatistiksel gösterim panosu (dashboard)** oluşturmayı amaçlayan bir uygulamadır. 
 
-## Kapsam ve Modüller
+---
 
-- **Veri Katmanı:** PostgreSQL veritabanı ile lig, takım, maç ve skor verilerinin yönetimi ve ETL boru hatları.
-- **Backend API:** FastAPI ile takım ve lig istatistikleri için RESTful servisler.
-- **Frontend Dashboard:** Next.js ve React kullanarak, Recharts/Chart.js ile zengin grafikler ve interaktif arayüz.
-- **Tahmin Modelleri:** XGBoost, LightGBM, LSTM gibi modellerle lig bazlı skor/olasılık tahminleri.
-- **Forecast Tab:** Frontend'de gelecek maçlar için tahminleri gösteren özel bir sayfa ve backend inference uç noktası.
-- **DevOps & MLOps:** Docker/Docker Compose ile konteynerizasyon, GitHub Actions ile CI/CD ve MLflow/DVC ile model versiyonlama.
+## 📚 Proje Kapsamı ve Modüller
 
-## Teknoloji ve Araç Seçimleri
+- **Veri Katmanı:**  
+  PostgreSQL veritabanı ile lig, takım, maç ve skor verilerinin yönetimi ve ETL süreçleri.
 
-- **Veritabanı:** PostgreSQL
-- **Backend:** FastAPI
-- **Frontend:** Next.js, React, Recharts/Chart.js
-- **Modelleme:** scikit-learn, XGBoost, PyTorch
-- **Konteynerizasyon:** Docker, docker-compose
-- **CI/CD:** GitHub Actions
-- **Model Versiyonlama:** MLflow veya DVC
+- **Backend API:**  
+  FastAPI kullanılarak takım ve lig istatistikleri için RESTful servisler geliştirilmiştir.
 
-## Yol Haritası (Özet)
+- **Frontend Dashboard:**  
+  Next.js ve React tabanlı modern, responsive arayüz; Recharts ve Chart.js ile interaktif grafikler.
 
-1.  **Hazırlık & Planlama:** Gereksinimlerin belirlenmesi, sistem tasarımları, temel altyapı kurulumu.
-2.  **Dashboard MVP:** Backend ve Frontend'in temel istatistik gösterimleriyle ilk sürümü.
-3.  **İleri Dashboard Özellikleri:** Detaylı filtreler, veri indirme ve opsiyonel kimlik doğrulama.
-4.  **Model Geliştirme & Eğitim:** Tahmin modellerinin oluşturulması ve eğitilmesi.
-5.  **Forecast Tab Entegrasyonu:** Tahmin sonuçlarının arayüze entegrasyonu.
-6.  **Üretim & İzleme:** Uygulamanın canlıya alınması ve performans izlemesi.
+- **DevOps & MLOps:**  
+  Docker ve Docker Compose ile konteynerleştirme; GitHub Actions ile CI/CD pipeline.
 
-## Kurulum ve Çalıştırma
+---
 
-(Bu bölüm, kurulum adımları tamamlandığında güncellenecektir.) 
+## 🗺️ Yol Haritası (Sprintler)
+
+1. **Hazırlık & Planlama:**  
+   Gereksinimler, sistem tasarımı, GitHub repo yapısı ve temel altyapı.
+
+2. **Dashboard MVP:**  
+   Backend API’lerin ve frontend temel istatistik ekranlarının geliştirilmesi.
+
+3. **İleri Dashboard Özellikleri:**  
+   Gelişmiş filtreler, tarih aralığı seçimi, CSV indirme ve kimlik doğrulama.
+
+4. **Üretim & İzleme:**  
+   Canlı ortam deploy, logging, monitoring ve performans takibi.
+
+---
+
+## ⚠️ Gelecek Planlar
+
+- Lig bazlı makine öğrenimi ve derin öğrenme tabanlı skor tahmin modellerinin geliştirilmesi ve Forecast sekmesinde sunulması planlanmaktadır.
+
+---
+
+## ⚙️ Teknoloji ve Araçlar
+
+| Katman          | Teknolojiler                          |
+| --------------- | ----------------------------------- |
+| Veritabanı      | PostgreSQL                          |
+| Backend         | Python, FastAPI                     |
+| Frontend        | Next.js, React, Recharts, Chart.js |
+| Konteynerleşme  | Docker, Docker Compose              |
+| CI/CD           | GitHub Actions                     |
+
+---
+
+## 🚀 Kurulum ve Çalıştırma
+
+*(Bu bölüm, projenin kurulum ve çalıştırma adımları tamamlandıkça güncellenecektir.)*
+
+---
+
+## 📂 Proje Dizini (Örnek)
+
