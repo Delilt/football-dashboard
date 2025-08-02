@@ -28,7 +28,13 @@ AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_
 
 Base = declarative_base()
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,7 +54,7 @@ class Match(Base):
     id = Column(Integer, primary_key=True, index=True)
     home_team_id = Column(Integer)
     away_team_id = Column(Integer)
-    final_score = Column(String)  # final_score örn: "2-1"
+    final_score = Column(String)  # örn: "2-1"
     first_half_score = Column(String)  # varsa
     match_date = Column(Date)
     league = Column(String)
@@ -57,14 +63,6 @@ class Team(Base):
     __tablename__ = "teams"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-
-app = FastAPI(lifespan=lifespan)
 
 async def get_db():
     async with AsyncSessionLocal() as session:
