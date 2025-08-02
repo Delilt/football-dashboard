@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 import ssl
 from fastapi.middleware.cors import CORSMiddleware
 
-# .env dosyasını yükle
 load_dotenv()
 
 DATABASE_URL = os.getenv(
@@ -55,7 +54,7 @@ class Match(Base):
     home_team_id = Column(Integer)
     away_team_id = Column(Integer)
     final_score = Column(String)  # örn: "2-1"
-    first_half_score = Column(String)  # varsa
+    first_half_score = Column(String)
     match_date = Column(Date)
     league = Column(String)
 
@@ -84,132 +83,6 @@ async def get_all_matches(db: AsyncSession = Depends(get_db)):
 async def get_all_teams(db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM teams"))
-        return [dict(row._mapping) for row in result]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stats/teams/")
-async def team_stats(db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(text("""
-            SELECT t.id, t.name,
-                COUNT(m.id) AS total_matches,
-                SUM(CASE
-                    WHEN t.id = m.home_team_id AND (split_part(m.final_score, '-', 1)::int > split_part(m.final_score, '-', 2)::int) THEN 1
-                    WHEN t.id = m.away_team_id AND (split_part(m.final_score, '-', 2)::int > split_part(m.final_score, '-', 1)::int) THEN 1
-                    ELSE 0
-                END) AS wins,
-                SUM(CASE
-                    WHEN t.id = m.home_team_id AND (split_part(m.final_score, '-', 1)::int < split_part(m.final_score, '-', 2)::int) THEN 1
-                    WHEN t.id = m.away_team_id AND (split_part(m.final_score, '-', 2)::int < split_part(m.final_score, '-', 1)::int) THEN 1
-                    ELSE 0
-                END) AS losses,
-                SUM(CASE
-                    WHEN t.id = m.home_team_id THEN split_part(m.final_score, '-', 1)::int
-                    WHEN t.id = m.away_team_id THEN split_part(m.final_score, '-', 2)::int
-                    ELSE 0
-                END) AS goals_for,
-                SUM(CASE
-                    WHEN t.id = m.home_team_id THEN split_part(m.final_score, '-', 2)::int
-                    WHEN t.id = m.away_team_id THEN split_part(m.final_score, '-', 1)::int
-                    ELSE 0
-                END) AS goals_against
-            FROM teams t
-            LEFT JOIN matches m ON t.id = m.home_team_id OR t.id = m.away_team_id
-            GROUP BY t.id, t.name
-            ORDER BY goals_for DESC
-        """))
-        return [dict(row._mapping) for row in result]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stats/teams/winloss/")
-async def team_win_loss_stats(db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(text("""
-            SELECT t.name,
-                SUM(CASE
-                    WHEN t.id = m.home_team_id AND (split_part(m.final_score, '-', 1)::int > split_part(m.final_score, '-', 2)::int) THEN 1
-                    WHEN t.id = m.away_team_id AND (split_part(m.final_score, '-', 2)::int > split_part(m.final_score, '-', 1)::int) THEN 1
-                    ELSE 0
-                END) AS wins,
-                SUM(CASE
-                    WHEN t.id = m.home_team_id AND (split_part(m.final_score, '-', 1)::int < split_part(m.final_score, '-', 2)::int) THEN 1
-                    WHEN t.id = m.away_team_id AND (split_part(m.final_score, '-', 2)::int < split_part(m.final_score, '-', 1)::int) THEN 1
-                    ELSE 0
-                END) AS losses
-            FROM teams t
-            LEFT JOIN matches m ON t.id = m.home_team_id OR t.id = m.away_team_id
-            GROUP BY t.id, t.name
-            ORDER BY wins DESC
-        """))
-        return [dict(row._mapping) for row in result]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stats/matches/top5goals/")
-async def top5_highest_scoring_matches(db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(text("""
-            SELECT id, home_team_id, away_team_id, final_score,
-                   (split_part(final_score, '-', 1)::int + split_part(final_score, '-', 2)::int) AS total_goals
-            FROM matches
-            ORDER BY total_goals DESC
-            LIMIT 5
-        """))
-        return [dict(row._mapping) for row in result]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stats/leagues/matchcount/")
-async def match_count_per_league(db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(text("""
-            SELECT league, COUNT(*) AS match_count
-            FROM matches
-            GROUP BY league
-            ORDER BY match_count DESC
-        """))
-        return [dict(row._mapping) for row in result]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stats/teams/avggoals/")
-async def avg_goals_per_team(db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(text("""
-            SELECT t.name,
-                   COUNT(m.id) AS total_matches,
-                   COALESCE(SUM(CASE
-                       WHEN t.id = m.home_team_id THEN split_part(m.final_score, '-', 1)::int
-                       WHEN t.id = m.away_team_id THEN split_part(m.final_score, '-', 2)::int
-                       ELSE 0
-                   END), 0) AS total_goals,
-                   CASE WHEN COUNT(m.id) > 0 THEN ROUND(
-                       COALESCE(SUM(CASE
-                           WHEN t.id = m.home_team_id THEN split_part(m.final_score, '-', 1)::int
-                           WHEN t.id = m.away_team_id THEN split_part(m.final_score, '-', 2)::int
-                           ELSE 0
-                       END), 0)::numeric / COUNT(m.id), 2)
-                   ELSE 0 END AS avg_goals
-            FROM teams t
-            LEFT JOIN matches m ON t.id = m.home_team_id OR t.id = m.away_team_id
-            GROUP BY t.id, t.name
-            ORDER BY avg_goals DESC
-        """))
-        return [dict(row._mapping) for row in result]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/stats/matches/countbydate/")
-async def match_count_by_date(db: AsyncSession = Depends(get_db)):
-    try:
-        result = await db.execute(text("""
-            SELECT match_date, COUNT(*) AS match_count
-            FROM matches
-            GROUP BY match_date
-            ORDER BY match_date ASC
-        """))
         return [dict(row._mapping) for row in result]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
