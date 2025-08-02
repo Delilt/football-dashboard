@@ -20,23 +20,25 @@ function HomePage() {
   // Lig filtresi
   const [selectedLeague, setSelectedLeague] = useState("All");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setTeams(await (await fetch('http://localhost:8000/teams/')).json());
-        const matchData = await (await fetch('http://localhost:8000/matches/')).json();
-        setMatches(matchData);
-        setTeamStats(await (await fetch('http://localhost:8000/stats/teams/')).json());
-        setWinLossStats(await (await fetch('http://localhost:8000/stats/teams/winloss/')).json());
-        setTop5Matches(await (await fetch('http://localhost:8000/stats/matches/top5goals/')).json());
-        setLeagueMatchCounts(await (await fetch('http://localhost:8000/stats/leagues/matchcount/')).json());
-        setAvgGoals(await (await fetch('http://localhost:8000/stats/teams/avggoals/')).json());
-        setMatchCountByDate(await (await fetch('http://localhost:8000/stats/matches/countbydate/')).json());
-      } catch (e) { setError(e); } 
-      finally { setLoading(false); }
-    };
-    fetchData();
-  }, []);
+  const API_BASE = "https://football-dashboard.onrender.com";
+
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setTeams(await (await fetch(`${API_BASE}/teams/`)).json());
+      const matchData = await (await fetch(`${API_BASE}/matches/`)).json();
+      setMatches(matchData);
+      setTeamStats(await (await fetch(`${API_BASE}/stats/teams/`)).json());
+      setWinLossStats(await (await fetch(`${API_BASE}/stats/teams/winloss/`)).json());
+      setTop5Matches(await (await fetch(`${API_BASE}/stats/matches/top5goals/`)).json());
+      setLeagueMatchCounts(await (await fetch(`${API_BASE}/stats/leagues/matchcount/`)).json());
+      setAvgGoals(await (await fetch(`${API_BASE}/stats/teams/avggoals/`)).json());
+      setMatchCountByDate(await (await fetch(`${API_BASE}/stats/matches/countbydate/`)).json());
+    } catch (e) { setError(e); } 
+    finally { setLoading(false); }
+  };
+  fetchData();
+}, []);
 
   const leagues = [...new Set(matches.map(m => m.league))];
   const filteredMatches = selectedLeague === "All" ? matches : matches.filter(m => m.league === selectedLeague);
