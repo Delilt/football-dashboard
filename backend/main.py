@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["football-dashboard-nine.vercel.app"],  # Vercel frontend domain
+    allow_origins=["https://football-dashboard-git-main-delils-projects-de7b82c4.vercel.app"],  # Vercel frontend domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
