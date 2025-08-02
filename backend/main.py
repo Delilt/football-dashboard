@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-vercel-domain.com"],  # Vercel frontend domain
+    allow_origins=["football-dashboard-nine.vercel.app"],  # Vercel frontend domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -74,15 +74,6 @@ async def lifespan(app: FastAPI):
 # FASTAPI APP
 # -------------------
 app = FastAPI(lifespan=lifespan)
-
-# CORS ayarları
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # -------------------
 # DB Dependency
