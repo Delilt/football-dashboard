@@ -39,7 +39,7 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://football-dashboard-nine.vercel.app",
+        "https://football-dashboard-green.vercel.app",
         "https://football-dashboard-git-main-delils-projects-de7b82c4.vercel.app",
         "https://football-dashboard-ptw6ly45p-delils-projects-de7b82c4.vercel.app",
         "https://football-dashboard-delils-projects-de7b82c4.vercel.app",
