@@ -17,11 +17,13 @@ DATABASE_URL = os.getenv(
 
 ssl_context = ssl.create_default_context()
 
+# Lokal geliştirme için SSL devre dışı
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
-    connect_args={"ssl": ssl_context}
+    connect_args={"ssl": False}  # ✅ SSL devre dışı
 )
+
 
 AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -35,6 +37,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# ✅ CORS Ayarları
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -48,6 +51,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ✅ MODELLER
 class Match(Base):
     __tablename__ = "matches"
     id = Column(Integer, primary_key=True, index=True)
@@ -63,14 +67,17 @@ class Team(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
 
+# ✅ DB Bağlantısı
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
+# ✅ ROOT
 @app.get("/")
 async def root():
     return {"message": "✅ Futbol İstatistik API Render + Supabase bağlantısı başarılı!"}
 
+# ✅ TÜM MAÇLAR
 @app.get("/matches/")
 async def get_all_matches(db: AsyncSession = Depends(get_db)):
     try:
@@ -79,10 +86,72 @@ async def get_all_matches(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ✅ TÜM TAKIMLAR
 @app.get("/teams/")
 async def get_all_teams(db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM teams"))
         return [dict(row._mapping) for row in result]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ✅ TAKIM İSTATİSTİKLERİ (YENİ)
+@app.get("/team_stats/{team_name}")
+async def get_team_stats(team_name: str, db: AsyncSession = Depends(get_db)):
+    try:
+        # Takım ID'sini bul
+        team_query = await db.execute(
+            text("SELECT id, name FROM teams WHERE name ILIKE :name"),
+            {"name": f"%{team_name}%"}
+        )
+        team = team_query.first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Takım bulunamadı")
+        team_id, team_real_name = team
+
+        # Maçları getir
+        matches_query = await db.execute(
+            text("SELECT * FROM matches WHERE home_team_id = :tid OR away_team_id = :tid"),
+            {"tid": team_id}
+        )
+        matches = [dict(row._mapping) for row in matches_query]
+
+        # İstatistikleri hesapla
+        total_matches = len(matches)
+        wins = losses = draws = goals_for = goals_against = 0
+
+        for m in matches:
+            if not m["final_score"]:
+                continue
+            try:
+                home_goals, away_goals = map(int, m["final_score"].split("-"))
+            except:
+                continue
+
+            if m["home_team_id"] == team_id:
+                goals_for += home_goals
+                goals_against += away_goals
+                if home_goals > away_goals: wins += 1
+                elif home_goals < away_goals: losses += 1
+                else: draws += 1
+            else:
+                goals_for += away_goals
+                goals_against += home_goals
+                if away_goals > home_goals: wins += 1
+                elif away_goals < home_goals: losses += 1
+                else: draws += 1
+
+        return {
+            "team_id": team_id,
+            "team_name": team_real_name,
+            "total_matches": total_matches,
+            "wins": wins,
+            "losses": losses,
+            "draws": draws,
+            "goals_for": goals_for,
+            "goals_against": goals_against,
+            "matches": matches
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
