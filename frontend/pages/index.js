@@ -284,7 +284,7 @@ function HomePage() {
             <table className="styled-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                 
                   <th>Ev</th>
                   <th>Dep</th>
                   <th>Final Skor</th>
@@ -295,7 +295,7 @@ function HomePage() {
               <tbody>
                 {filteredMatches.map((m) => (
                   <tr key={m.id}>
-                    <td>{m.id}</td>
+                    
                     <td>
                       {teams.find((t) => t.id === m.home_team_id)?.name ||
                         m.home_team_id}
