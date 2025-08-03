@@ -17,13 +17,11 @@ DATABASE_URL = os.getenv(
 
 ssl_context = ssl.create_default_context()
 
-# Lokal geliştirme için SSL devre dışı
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
-    connect_args={"ssl": False}  # ✅ SSL devre dışı
+    connect_args={"ssl": ssl_context}
 )
-
 
 AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
