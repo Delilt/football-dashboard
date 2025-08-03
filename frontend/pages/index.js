@@ -426,6 +426,10 @@ function HomePage() {
           background: #f4f4f4;
           color: #333;
         }
+        .td {
+          text-align: center;
+        
+        }
         .search-results {
           list-style: none;
           max-height: 150px;
