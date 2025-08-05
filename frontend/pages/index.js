@@ -13,11 +13,7 @@ import {
 } from 'chart.js';
 import { Bar, Pie, Line, Radar } from 'react-chartjs-2';
 
-// React-icons'u Next.js'de kullanmak için Next.js'e özel bazı ayarlamalar
-// gerekebilir. Bu durumdan kaçınmak için SVG ve Unicode karakterler kullanıldı.
-
 // Chart.js bileşenlerini global olarak kaydediyoruz.
-// Next.js'deki dynamic import'a gerek kalmadan çalışacaktır.
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -32,11 +28,12 @@ ChartJS.register(
 
 /*
   Bu kod, futbol ligi istatistiklerini gösteren bir dashboard uygulamasıdır.
-  Mevcut API'dan alınan verilerle Chart.js kütüphanesi kullanılarak
-  dinamik ve interaktif grafikler oluşturulmuştur.
-  Kullanıcı deneyimini artırmak için gelişmiş arama ve yükleme ekranı eklenmiştir.
-  Bu versiyon, stillendirme için Tailwind CSS yerine, component içerisinde yer alan
-  bir <style> etiketi kullanır.
+  Kullanıcının isteği üzerine sidebar tamamen kaldırıldı.
+  Loading ekranı daha animasyonlu ve estetik hale getirildi.
+  Grafik verileri, kullanıcının sağladığı yeni JSON yapısına göre yeniden hesaplanarak
+  daha anlamlı istatistikler oluşturuldu.
+  Bu versiyon, stillendirme için yine component içerisinde yer alan
+  bir <style jsx> etiketi kullanır.
 */
 
 const API_BASE = "https://football-dashboard.onrender.com";
@@ -50,7 +47,6 @@ const App = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [showSidebar, setShowSidebar] = useState(false);
   const searchInputRef = useRef(null);
 
   // Veri çekme işlemi
@@ -68,9 +64,9 @@ const App = () => {
       } catch (e) {
         setError(e);
       } finally {
-        setTimeout(() => { // Yükleme ekranı süresini simüle etmek için eklendi.
+        setTimeout(() => {
           setIsLoading(false);
-        }, 1500);
+        }, 2000);
       }
     };
     fetchData();
@@ -125,7 +121,11 @@ const App = () => {
     return (
       <div className={`app-loading-screen ${isDarkMode ? 'dark' : ''}`}>
         <div className="loading-content">
-          <div className="loading-spinner"></div>
+          <div className="loading-animation">
+            <div className="ball one"></div>
+            <div className="ball two"></div>
+            <div className="ball three"></div>
+          </div>
           <p className="loading-text">Veriler Yükleniyor...</p>
         </div>
       </div>
@@ -145,66 +145,35 @@ const App = () => {
   }
 
   // --- Genel Ligler İçin Veri Hesaplama ---
-  const leagueCounts = matches.reduce((acc, m) => { acc[m.league] = (acc[m.league] || 0) + 1; return acc; }, {});
-  const leagues = Object.keys(leagueCounts);
+  const leagues = [...new Set(matches.map(m => m.league))];
 
-  // Genel Grafik 1: Toplam Maç Sayısı
+  // Genel Grafik 1: Liglerde Oynanan Maç Sayısı
+  const matchesPerLeague = leagues.reduce((acc, l) => {
+    acc[l] = matches.filter(m => m.league === l).length;
+    return acc;
+  }, {});
   const generalChart1Data = {
-    labels: leagues,
+    labels: Object.keys(matchesPerLeague),
     datasets: [{
       label: 'Toplam Maç Sayısı',
-      data: leagues.map(l => leagueCounts[l]),
-      backgroundColor: leagues.map((_, i) => `hsl(${i * 60}, 70%, 50%)`),
+      data: Object.values(matchesPerLeague),
+      backgroundColor: ['#22c55e', '#3b82f6', '#f97316', '#ef4444', '#a855f7'],
     }]
   };
 
-  // Genel Grafik 2: En Golcü Takımlar (Her Ligden Bir Tane)
-  const topScorersPerLeague = leagues.map(league => {
+  // Genel Grafik 2: Liglerin Galibiyet, Beraberlik, Mağlubiyet Oranları
+  const leagueResults = leagues.map(league => {
     const leagueMatches = matches.filter(m => m.league === league);
-    const teamGoals = leagueMatches.reduce((acc, m) => {
-      const [h, a] = m.final_score.split('-').map(Number);
-      acc[m.home_team_id] = (acc[m.home_team_id] || 0) + h;
-      acc[m.away_team_id] = (acc[m.away_team_id] || 0) + a;
-      return acc;
-    }, {});
-
-    const topTeamId = Object.keys(teamGoals).reduce((a, b) => teamGoals[a] > teamGoals[b] ? a : b, null);
-    const topTeam = teams.find(t => t.id === +topTeamId);
-
-    return {
-      league: league,
-      teamName: topTeam ? topTeam.name : 'Bilinmiyor',
-      goals: topTeamId ? teamGoals[topTeamId] : 0,
-    };
-  });
-  const generalChart2Data = {
-    labels: topScorersPerLeague.map(item => `${item.teamName} (${item.league})`),
-    datasets: [{
-      label: 'Atılan Gol',
-      data: topScorersPerLeague.map(item => item.goals),
-      backgroundColor: '#22c55e',
-    }]
-  };
-
-  // Galibiyet, beraberlik, mağlubiyet verilerini hesaplama
-  const calculateWinRates = (matchList) => {
     let wins = 0, draws = 0, losses = 0;
-    matchList.forEach(m => {
+    leagueMatches.forEach(m => {
       const [h, a] = m.final_score.split('-').map(Number);
       if (h > a) wins++;
       else if (h < a) losses++;
       else draws++;
     });
-    return { wins, draws, losses };
-  };
-
-  // Genel Grafik 3: Liglerin Galibiyet, Beraberlik, Mağlubiyet Oranları
-  const leagueResults = leagues.map(league => {
-    const leagueMatches = matches.filter(m => m.league === league);
-    const { wins, draws, losses } = calculateWinRates(leagueMatches);
     return { league, wins, draws, losses };
   });
-  const generalChart3Data = {
+  const generalChart2Data = {
     labels: leagues,
     datasets: [
       { label: 'Galibiyet', data: leagueResults.map(r => r.wins), backgroundColor: '#10b981' },
@@ -213,21 +182,40 @@ const App = () => {
     ]
   };
 
-  // Genel Grafik 4: Liglerdeki Kırmızı Kartlar (Örnek Veri)
-  const redCardsData = {
-    labels: leagues,
+  // Genel Grafik 3: İlk Yarı ve Final Golleri
+  const totalFirstHalfGoals = matches.reduce((acc, m) => acc + m.first_half_score.split(' - ').map(Number).reduce((sum, g) => sum + g, 0), 0);
+  const totalSecondHalfGoals = matches.reduce((acc, m) => acc + (m.final_score.split(' - ').map(Number).reduce((sum, g) => sum + g, 0) - m.first_half_score.split(' - ').map(Number).reduce((sum, g) => sum + g, 0)), 0);
+  const generalChart3Data = {
+    labels: ['İlk Yarı Golleri', 'İkinci Yarı Golleri'],
     datasets: [{
-      label: 'Toplam Kırmızı Kart',
-      data: leagues.map(l => (l.length * 5) + Math.floor(Math.random() * 10)), // Örnek veri
-      backgroundColor: '#eab308'
+      data: [totalFirstHalfGoals, totalSecondHalfGoals],
+      backgroundColor: ['#3b82f6', '#f97316'],
+      hoverOffset: 4,
+    }]
+  };
+  
+  // Genel Grafik 4: Ülkelere Göre Maç Sayısı
+  const countries = [...new Set(matches.map(m => m.country))];
+  const matchesPerCountry = countries.reduce((acc, c) => {
+    acc[c] = matches.filter(m => m.country === c).length;
+    return acc;
+  }, {});
+  const generalChart4Data = {
+    labels: Object.keys(matchesPerCountry),
+    datasets: [{
+      label: 'Ülke Başına Maç Sayısı',
+      data: Object.values(matchesPerCountry),
+      backgroundColor: ['#3b82f6', '#f97316', '#a855f7'],
     }]
   };
 
 
   // --- Takıma Özel Veri Hesaplama ---
   const teamMatches = selectedTeam ? matches.filter(m => m.home_team_id === selectedTeam.id || m.away_team_id === selectedTeam.id) : [];
+  
+  // Takıma özel galibiyet, beraberlik, mağlubiyet verileri
   const teamWinRates = selectedTeam ? teamMatches.reduce((acc, m) => {
-    const [h, a] = m.final_score.split('-').map(Number);
+    const [h, a] = m.final_score.split(' - ').map(Number);
     if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
       acc.wins++;
     } else if (h === a) {
@@ -237,9 +225,11 @@ const App = () => {
     }
     return acc;
   }, { wins: 0, draws: 0, losses: 0 }) : { wins: 0, draws: 0, losses: 0 };
+  
+  // Takıma özel aylık goller
   const monthlyGoals = selectedTeam ? teamMatches.reduce((acc, m) => {
-    const month = new Date(m.match_date).toLocaleString('tr-TR', { month: 'long' });
-    const goals = m.home_team_id === selectedTeam.id ? +m.final_score.split('-')[0] : +m.final_score.split('-')[1];
+    const month = new Date(m.date).toLocaleString('tr-TR', { month: 'long' });
+    const goals = m.home_team_id === selectedTeam.id ? +m.final_score.split(' - ')[0] : +m.final_score.split(' - ')[1];
     if (acc[month]) {
       acc[month] += goals;
     } else {
@@ -248,11 +238,22 @@ const App = () => {
     return acc;
   }, {}) : {};
 
-  const teamGoalsOverTime = Object.entries(monthlyGoals).map(([month, goals]) => ({ month, goals }));
+  // Aylık gol verilerini doğru sırayla al
+  const sortedMonthlyGoals = Object.keys(monthlyGoals)
+    .sort((a, b) => new Date(`01 ${a} 2020`).getMonth() - new Date(`01 ${b} 2020`).getMonth())
+    .map(month => ({ month, goals: monthlyGoals[month] }));
 
-  const homeGoals = teamMatches.reduce((acc, m) => acc + (m.home_team_id === selectedTeam.id ? +m.final_score.split('-')[0] : +m.final_score.split('-')[1]), 0);
-  const awayGoals = teamMatches.reduce((acc, m) => acc + (m.away_team_id === selectedTeam.id ? +m.final_score.split('-')[1] : +m.final_score.split('-')[0]), 0);
+  // Takıma özel ev ve deplasman performans verileri
+  const homeWins = teamMatches.filter(m => m.home_team_id === selectedTeam.id && +m.final_score.split(' - ')[0] > +m.final_score.split(' - ')[1]).length;
+  const awayWins = teamMatches.filter(m => m.away_team_id === selectedTeam.id && +m.final_score.split(' - ')[1] > +m.final_score.split(' - ')[0]).length;
+  const homeLosses = teamMatches.filter(m => m.home_team_id === selectedTeam.id && +m.final_score.split(' - ')[0] < +m.final_score.split(' - ')[1]).length;
+  const awayLosses = teamMatches.filter(m => m.away_team_id === selectedTeam.id && +m.final_score.split(' - ')[1] < +m.final_score.split(' - ')[0]).length;
   
+  // Takıma özel ilk yarı ve ikinci yarı golleri
+  const teamFirstHalfGoals = teamMatches.reduce((acc, m) => acc + (m.home_team_id === selectedTeam.id ? +m.first_half_score.split(' - ')[0] : +m.first_half_score.split(' - ')[1]), 0);
+  const teamSecondHalfGoals = teamMatches.reduce((acc, m) => acc + ( (m.home_team_id === selectedTeam.id ? +m.final_score.split(' - ')[0] : +m.final_score.split(' - ')[1]) - (m.home_team_id === selectedTeam.id ? +m.first_half_score.split(' - ')[0] : +m.first_half_score.split(' - ')[1]) ), 0);
+
+
   // Takıma Özel Grafik 1: Galibiyet, Beraberlik, Mağlubiyet Oranı
   const teamChart1Data = {
     labels: ['Galibiyet', 'Beraberlik', 'Mağlubiyet'],
@@ -265,51 +266,33 @@ const App = () => {
 
   // Takıma Özel Grafik 2: Aylık Atılan Goller
   const teamChart2Data = {
-    labels: teamGoalsOverTime.map(item => item.month),
+    labels: sortedMonthlyGoals.map(item => item.month),
     datasets: [{
       label: 'Atılan Goller',
-      data: teamGoalsOverTime.map(item => item.goals),
+      data: sortedMonthlyGoals.map(item => item.goals),
       fill: false,
       borderColor: '#3b82f6',
-      tension: 0.1,
+      tension: 0.3,
     }]
   };
 
-  // Takıma Özel Grafik 3: Ev ve Deplasman Performansı (Galibiyet)
-  const teamPerformance = {
+  // Takıma Özel Grafik 3: Ev ve Deplasman Performansı (Galibiyet/Mağlubiyet)
+  const teamPerformanceData = {
     labels: ['Ev', 'Deplasman'],
     datasets: [
-      {
-        label: 'Galibiyet',
-        data: [
-          teamMatches.filter(m => m.home_team_id === selectedTeam.id && +m.final_score.split('-')[0] > +m.final_score.split('-')[1]).length,
-          teamMatches.filter(m => m.away_team_id === selectedTeam.id && +m.final_score.split('-')[1] > +m.final_score.split('-')[0]).length
-        ],
-        backgroundColor: '#10b981',
-      },
-      {
-        label: 'Mağlubiyet',
-        data: [
-          teamMatches.filter(m => m.home_team_id === selectedTeam.id && +m.final_score.split('-')[0] < +m.final_score.split('-')[1]).length,
-          teamMatches.filter(m => m.away_team_id === selectedTeam.id && +m.final_score.split('-')[1] < +m.final_score.split('-')[0]).length
-        ],
-        backgroundColor: '#ef4444',
-      }
+      { label: 'Galibiyet', data: [homeWins, awayWins], backgroundColor: '#10b981' },
+      { label: 'Mağlubiyet', data: [homeLosses, awayLosses], backgroundColor: '#ef4444' },
     ]
   };
 
-  // Takıma Özel Grafik 4: Atılan Gol Dağılımı (Radar)
+  // Takıma Özel Grafik 4: İlk Yarı ve İkinci Yarı Golleri
   const teamChart4Data = {
-    labels: ['Ev Golleri', 'Deplasman Golleri'],
+    labels: ['İlk Yarı', 'İkinci Yarı'],
     datasets: [{
       label: 'Atılan Goller',
-      data: [homeGoals, awayGoals],
-      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-      borderColor: '#3b82f6',
-      pointBackgroundColor: '#3b82f6',
-      pointBorderColor: '#fff',
-      pointHoverBackgroundColor: '#fff',
-      pointHoverBorderColor: '#3b82f6',
+      data: [teamFirstHalfGoals, teamSecondHalfGoals],
+      backgroundColor: ['#f97316', '#3b82f6'],
+      hoverOffset: 4,
     }]
   };
 
@@ -353,11 +336,16 @@ const App = () => {
           --hover-color: #374151;
         }
 
+        body {
+          margin: 0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        }
+
         .app-container {
-          height: 100vh;
+          min-height: 100vh;
           display: flex;
+          flex-direction: column;
           transition: background-color 0.3s;
-          overflow: hidden;
           background-color: var(--bg-color);
           color: var(--text-color);
         }
@@ -373,26 +361,36 @@ const App = () => {
         }
 
         .loading-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        
-        .loading-spinner {
-          width: 4rem;
-          height: 4rem;
-          border: 4px dashed #22c55e;
-          border-radius: 9999px;
-          animation: spin 1s linear infinite;
+          text-align: center;
         }
 
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        .loading-animation {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100px;
+        }
+
+        .ball {
+          width: 20px;
+          height: 20px;
+          background-color: #22c55e;
+          border-radius: 50%;
+          margin: 0 5px;
+          animation: bounce 1.2s infinite ease-in-out both;
+        }
+
+        .ball.one { animation-delay: -0.32s; }
+        .ball.two { animation-delay: -0.16s; }
+        .ball.three { animation-delay: 0s; }
+
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1); }
         }
 
         .loading-text {
-          margin-top: 1rem;
+          margin-top: 1.5rem;
           font-size: 1.25rem;
           font-weight: 600;
         }
@@ -415,63 +413,13 @@ const App = () => {
           margin-top: 0.5rem;
         }
         
-        .app-sidebar {
-          position: fixed;
-          z-index: 20;
-          height: 100%;
-          width: 16rem;
-          padding: 1.5rem;
-          background-color: var(--card-bg-color);
-          color: var(--text-color);
-          transition: transform 0.3s ease-in-out;
-          transform: translateX(-100%);
-        }
-        
-        .app-sidebar.show {
-          transform: translateX(0);
-        }
-        
-        .sidebar-title {
-          font-size: 1.875rem;
-          font-weight: 700;
-          margin-bottom: 1.5rem;
-        }
-
-        .sidebar-nav-item {
-          margin-bottom: 0.5rem;
-        }
-
-        .sidebar-nav-link {
-          display: block;
-          padding: 0.5rem;
-          border-radius: 0.5rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        .sidebar-nav-link:hover {
-          background-color: var(--hover-color);
-        }
-        
         .main-content {
           flex: 1;
           display: flex;
           flex-direction: column;
           min-height: 100vh;
-          margin-left: 0;
           background-color: var(--bg-color);
           color: var(--text-color);
-          transition: all 0.3s;
-        }
-        
-        @media (min-width: 1024px) {
-          .app-sidebar {
-            transform: translateX(0);
-          }
-          
-          .main-content {
-            margin-left: 16rem;
-          }
         }
         
         .app-header {
@@ -489,42 +437,19 @@ const App = () => {
         .header-content {
           display: flex;
           align-items: center;
-        }
-        
-        .header-menu-button {
-          padding: 0.5rem;
-          border-radius: 9999px;
-          transition: background-color 0.2s;
-          margin-right: 1rem;
-        }
-        
-        @media (min-width: 1024px) {
-          .header-menu-button {
-            display: none;
-          }
-        }
-        
-        .header-menu-button:hover {
-          background-color: var(--hover-color);
+          flex: 1;
         }
         
         .header-title {
           font-size: 1.5rem;
           font-weight: 700;
+          margin-right: 1.5rem;
         }
 
-        @media (max-width: 767px) {
-          .header-title {
-            display: none;
-          }
-        }
-        
         .search-container {
           position: relative;
           flex: 1;
           max-width: 32rem;
-          margin-left: 1rem;
-          margin-right: 1rem;
         }
         
         .search-box {
@@ -552,8 +477,7 @@ const App = () => {
         
         .search-input:focus {
           outline: none;
-          ring: 2px solid #22c55e;
-          ring-opacity: 0.5;
+          box-shadow: 0 0 0 2px #22c55e, 0 0 0 4px rgba(34, 197, 94, 0.25);
         }
 
         .search-suggestions {
@@ -605,7 +529,7 @@ const App = () => {
         
         .main-content-inner {
           flex: 1;
-          overflow: auto;
+          overflow-y: auto;
           padding: 1rem;
         }
         
@@ -698,8 +622,8 @@ const App = () => {
         }
 
         .match-list-table {
-          min-width: 100%;
-          table-layout: auto;
+          width: 100%;
+          border-collapse: collapse;
           text-align: left;
         }
 
@@ -744,74 +668,52 @@ const App = () => {
         }
 
         .result-win {
-          color: #10b981;
+          color: var(--success-color);
         }
         .result-loss {
-          color: #ef4444;
+          color: var(--error-color);
         }
         .result-draw {
-          color: #f59e0b;
+          color: var(--warning-color);
         }
       `}</style>
       <div className={`app-container ${isDarkMode ? 'dark' : ''}`}>
-        {/* Sidebar - Sadece takım arama modunda göster */}
-        <aside className={`app-sidebar ${showSidebar ? 'show' : ''}`}>
-          <h2 className="sidebar-title">Ligler</h2>
-          <nav>
-            <ul>
-              {leagues.map(l => (
-                <li key={l} className="sidebar-nav-item">
-                  <a onClick={handleReset} className="sidebar-nav-link">
-                    {l}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </aside>
-
         {/* Ana İçerik */}
         <main className="main-content">
           <header className="app-header">
             <div className="header-content">
-              <button
-                onClick={() => setShowSidebar(!showSidebar)}
-                className="header-menu-button"
-              >
-                <span className="text-2xl">☰</span>
-              </button>
               <h1 className="header-title">Futbol Dashboard</h1>
-            </div>
-            <div className="search-container" ref={searchInputRef}>
-              <div className="search-box">
-                <span className="search-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                </span>
-                <input
-                  type="text"
-                  className="search-input"
-                  placeholder="Takım ara..."
-                  value={searchTeam}
-                  onChange={e => setSearchTeam(e.target.value)}
-                />
-              </div>
-              {suggestions.length > 0 && (
-                <div className="search-suggestions">
-                  {suggestions.map((team) => (
-                    <div
-                      key={team.id}
-                      onClick={() => handleSelectTeam(team)}
-                      className="suggestion-item"
-                    >
-                      <span className="suggestion-icon">⚽</span>
-                      <span className="suggestion-text">{team.name}</span>
-                    </div>
-                  ))}
+              <div className="search-container" ref={searchInputRef}>
+                <div className="search-box">
+                  <span className="search-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  </span>
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Takım ara..."
+                    value={searchTeam}
+                    onChange={e => setSearchTeam(e.target.value)}
+                  />
                 </div>
-              )}
+                {suggestions.length > 0 && (
+                  <div className="search-suggestions">
+                    {suggestions.map((team) => (
+                      <div
+                        key={team.id}
+                        onClick={() => handleSelectTeam(team)}
+                        className="suggestion-item"
+                      >
+                        <span className="suggestion-icon">⚽</span>
+                        <span className="suggestion-text">{team.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <button onClick={toggleTheme} className="theme-toggle-button">
-              {isDarkMode ? <span className="text-2xl">🌞</span> : <span className="text-2xl">🌙</span>}
+              {isDarkMode ? <span role="img" aria-label="sun" className="text-2xl">🌞</span> : <span role="img" aria-label="moon" className="text-2xl">🌙</span>}
             </button>
           </header>
 
@@ -835,10 +737,10 @@ const App = () => {
                     <Line data={teamChart2Data} />
                   </ChartCard>
                   <ChartCard title={`${selectedTeam.name} Ev ve Deplasman Performansı`}>
-                    <Bar data={teamPerformance} />
+                    <Bar data={teamPerformanceData} />
                   </ChartCard>
-                  <ChartCard title={`${selectedTeam.name} Ev/Deplasman Golleri`}>
-                    <Radar data={teamChart4Data} />
+                  <ChartCard title={`${selectedTeam.name} İlk Yarı ve İkinci Yarı Golleri`}>
+                    <Pie data={teamChart4Data} />
                   </ChartCard>
                 </div>
 
@@ -849,17 +751,17 @@ const App = () => {
                     <table className="match-list-table">
                       <thead>
                         <tr className="table-header">
-                          <th className="rounded-tl-xl">Tarih</th>
+                          <th>Tarih</th>
                           <th>Rakip</th>
                           <th>Skor</th>
-                          <th className="rounded-tr-xl">Sonuç</th>
+                          <th>Sonuç</th>
                         </tr>
                       </thead>
                       <tbody>
                         {teamMatches.map(m => {
                           const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
                           const score = m.final_score;
-                          const [h, a] = score.split('-').map(Number);
+                          const [h, a] = score.split(' - ').map(Number);
                           let result;
                           if (h === a) {
                             result = 'Beraberlik';
@@ -870,7 +772,7 @@ const App = () => {
                           }
                           return (
                             <tr key={m.id} className="table-row">
-                              <td className="table-cell">{m.match_date}</td>
+                              <td className="table-cell">{m.date}</td>
                               <td className="table-cell">{opponent?.name || 'Bilinmiyor'}</td>
                               <td className="table-cell">{score}</td>
                               <td className={`table-cell cell-result ${
@@ -890,17 +792,17 @@ const App = () => {
             ) : (
               // Genel ligler görünümü
               <div className="stats-grid">
-                <ChartCard title="Liglerde Oynanan Toplam Maç">
+                <ChartCard title="Liglere Göre Toplam Maç Sayısı">
                   <Bar data={generalChart1Data} />
                 </ChartCard>
-                <ChartCard title="Liglerin En Golcü Takımları">
+                <ChartCard title="Liglerin Galibiyet/Beraberlik/Mağlubiyet Oranları">
                   <Bar data={generalChart2Data} />
                 </ChartCard>
-                <ChartCard title="Liglerin Galibiyet/Beraberlik/Mağlubiyet Oranları">
-                  <Bar data={generalChart3Data} />
+                <ChartCard title="İlk Yarı ve İkinci Yarı Gol Oranları">
+                  <Pie data={generalChart3Data} />
                 </ChartCard>
-                <ChartCard title="Liglerin Kırmızı Kart Sayıları">
-                  <Bar data={redCardsData} />
+                <ChartCard title="Ülkelere Göre Maç Dağılımı">
+                  <Bar data={generalChart4Data} />
                 </ChartCard>
               </div>
             )}
