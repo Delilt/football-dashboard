@@ -28,13 +28,9 @@ ChartJS.register(
 
 /*
   Bu kod, futbol ligi istatistiklerini gösteren bir dashboard uygulamasıdır.
-  Kullanıcının isteği üzerine loading ekranının görünmeme sorunu giderildi.
-  "app-loading-screen" bileşenine fixed position ve yüksek z-index değeri eklenerek
-  diğer bileşenlerin üzerinde daima görünmesi sağlandı.
-  Hala daha "TypeError: Cannot read properties of null (reading 'split')" hatası,
-  veri alanlarının null olup olmadığı kontrol edilerek giderildi.
-  Son olarak, sayfanın ana içeriğinin etrafındaki boşluk (beyaz çerçeve) sorunu
-  body ve html etiketlerinin kenar boşlukları (margin) sıfırlanarak giderildi.
+  Kullanıcının isteği üzerine takım maç listesi artık sabit bir yükseklikte
+  kaydırılabilir bir alanda gösterilmektedir. Ayrıca, maçları tarih aralığına
+  göre filtreleme özelliği eklenmiştir.
 */
 
 const API_BASE = "https://football-dashboard.onrender.com";
@@ -48,6 +44,8 @@ const App = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [startDate, setStartDate] = useState(''); // Başlangıç tarihi için state
+  const [endDate, setEndDate] = useState('');     // Bitiş tarihi için state
   const searchInputRef = useRef(null);
 
   // Veri çekme işlemi
@@ -115,6 +113,8 @@ const App = () => {
     setSelectedTeam(null);
     setSearchTeam('');
     setSuggestions([]);
+    setStartDate(''); // Tarih filtrelerini de sıfırla
+    setEndDate('');
   };
 
   // Yükleme ekranı
@@ -223,7 +223,18 @@ const App = () => {
 
 
   // --- Takıma Özel Veri Hesaplama ---
-  const teamMatches = selectedTeam ? matches.filter(m => m.home_team_id === selectedTeam.id || m.away_team_id === selectedTeam.id) : [];
+  // Tarih filtrelerini de kullanarak maçları filtrele
+  const teamMatches = selectedTeam ? matches.filter(m => {
+    const matchDate = new Date(m.date);
+    const filterStartDate = startDate ? new Date(startDate) : null;
+    const filterEndDate = endDate ? new Date(endDate) : null;
+    
+    // Hem takım filtresi hem de tarih filtresi uygulanır
+    const isTeamMatch = m.home_team_id === selectedTeam.id || m.away_team_id === selectedTeam.id;
+    const isWithinDateRange = (!filterStartDate || matchDate >= filterStartDate) && (!filterEndDate || matchDate <= filterEndDate);
+
+    return isTeamMatch && isWithinDateRange;
+  }) : [];
   
   // Takıma özel galibiyet, beraberlik, mağlubiyet verileri
   const teamWinRates = selectedTeam ? teamMatches.reduce((acc, m) => {
@@ -241,7 +252,8 @@ const App = () => {
   
   // Takıma özel aylık goller
   const monthlyGoals = selectedTeam ? teamMatches.reduce((acc, m) => {
-    const month = new Date(m.date).toLocaleString('tr-TR', { month: 'long' });
+    const matchDate = new Date(m.date);
+    const month = matchDate.toLocaleString('tr-TR', { month: 'long' });
     const finalScore = m.final_score || '0 - 0';
     const goals = m.home_team_id === selectedTeam.id ? +finalScore.split(' - ')[0] : +finalScore.split(' - ')[1];
     if (acc[month]) {
@@ -257,7 +269,7 @@ const App = () => {
     .sort((a, b) => new Date(`01 ${a} 2020`).getMonth() - new Date(`01 ${b} 2020`).getMonth())
     .map(month => ({ month, goals: monthlyGoals[month] }));
 
-  // Takıma özel ev ve deplasman performans verileri
+  // Takıma özel ev ve deplasman performansı verileri
   const homeWins = teamMatches.filter(m => {
     const finalScore = m.final_score || '0 - 0';
     return m.home_team_id === selectedTeam.id && +finalScore.split(' - ')[0] > +finalScore.split(' - ')[1];
@@ -775,6 +787,28 @@ const App = () => {
                     Geri Dön
                   </button>
                 </div>
+                
+                {/* Tarih Filtresi Bölümü */}
+                <div className="flex flex-wrap items-center justify-center gap-4 mb-6 p-4 rounded-xl shadow-md border-solid border-2 border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium">Başlangıç Tarihi</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium">Bitiş Tarihi</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                        />
+                    </div>
+                </div>
 
                 {/* Takıma özel grafikler */}
                 <div className="stats-grid">
@@ -796,44 +830,54 @@ const App = () => {
                 <div className="match-list-container">
                   <h2 className="match-list-title">Oynanan Maçlar</h2>
                   <div className="overflow-x-auto">
-                    <table className="match-list-table">
-                      <thead>
-                        <tr className="table-header">
-                          <th>Tarih</th>
-                          <th>Rakip</th>
-                          <th>Skor</th>
-                          <th>Sonuç</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {teamMatches.map(m => {
-                          const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
-                          const score = m.final_score || '0 - 0'; // Hata düzeltmesi
-                          const [h, a] = score.split(' - ').map(Number);
-                          let result;
-                          if (h === a) {
-                            result = 'Beraberlik';
-                          } else if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
-                            result = 'Galibiyet';
-                          } else {
-                            result = 'Mağlubiyet';
-                          }
-                          return (
-                            <tr key={m.id} className="table-row">
-                              <td className="table-cell">{m.date}</td>
-                              <td className="table-cell">{opponent?.name || 'Bilinmiyor'}</td>
-                              <td className="table-cell">{score}</td>
-                              <td className={`table-cell cell-result ${
-                                result === 'Galibiyet' ? 'result-win' :
-                                result === 'Mağlubiyet' ? 'result-loss' : 'result-draw'
-                              }`}>
-                                {result}
-                              </td>
+                    <div className="max-h-96 overflow-y-auto">
+                      <table className="match-list-table">
+                        <thead>
+                          <tr className="table-header sticky top-0">
+                            <th>Tarih</th>
+                            <th>Rakip</th>
+                            <th>Skor</th>
+                            <th>Sonuç</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamMatches.length > 0 ? (
+                            teamMatches.map(m => {
+                              const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
+                              const score = m.final_score || '0 - 0'; // Hata düzeltmesi
+                              const [h, a] = score.split(' - ').map(Number);
+                              let result;
+                              if (h === a) {
+                                result = 'Beraberlik';
+                              } else if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
+                                result = 'Galibiyet';
+                              } else {
+                                result = 'Mağlubiyet';
+                              }
+                              return (
+                                <tr key={m.id} className="table-row">
+                                  <td className="table-cell">{m.date}</td>
+                                  <td className="table-cell">{opponent?.name || 'Bilinmiyor'}</td>
+                                  <td className="table-cell">{score}</td>
+                                  <td className={`table-cell cell-result ${
+                                    result === 'Galibiyet' ? 'result-win' :
+                                    result === 'Mağlubiyet' ? 'result-loss' : 'result-draw'
+                                  }`}>
+                                    {result}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                                <td colSpan="4" className="table-cell text-center italic text-gray-500">
+                                    Seçilen tarih aralığında maç bulunamadı.
+                                </td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>
