@@ -934,7 +934,6 @@ const App = () => {
           </div>
         </main>
       </div>
-    </>
   );
 }
 
