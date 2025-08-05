@@ -11,6 +11,8 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+// Tailwind CSS'i dahil ediyoruz.
+import 'tailwindcss/tailwind.css';
 import { Bar, Pie, Line, Radar } from 'react-chartjs-2';
 
 // Chart.js bileşenlerini global olarak kaydediyoruz.
@@ -805,7 +807,7 @@ const App = () => {
                   </ChartCard>
                 </div>
 
-                {/* Tarih Filtresi Bölümü - Yeni Konum */}
+                {/* Tarih Filtresi Bölümü - Yeni Konum ve Estetik Görünüm */}
                 <div className="flex flex-wrap items-center justify-center gap-4 mb-6 p-4 rounded-xl shadow-md border-solid border-2 border-gray-200 dark:border-gray-700">
                     <div className="flex flex-col">
                         <label className="text-sm font-medium">Başlangıç Tarihi</label>
@@ -831,10 +833,10 @@ const App = () => {
                 <div className="match-list-container">
                   <h2 className="match-list-title">Oynanan Maçlar</h2>
                   <div className="overflow-x-auto">
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-96 overflow-y-auto"> {/* Maç listesi için scroll özelliği */}
                       <table className="match-list-table">
                         <thead>
-                          <tr className="table-header sticky top-0">
+                          <tr className="table-header sticky top-0"> {/* Başlıkların sabit kalması için */}
                             <th>Tarih</th>
                             <th>Rakip</th>
                             <th>Skor</th>
