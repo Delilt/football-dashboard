@@ -807,113 +807,83 @@ const App = () => {
                   </ChartCard>
                 </div>
 
-                {/* Tarih Filtresi Bölümü - Estetik & Modern */}
-<div className="flex flex-wrap items-center justify-center gap-6 mb-8 p-6 
-                rounded-2xl shadow-lg border border-gray-300/40 dark:border-gray-700/50 
-                backdrop-blur-md bg-gradient-to-r from-white/80 to-gray-100/50 
-                dark:from-gray-800/70 dark:to-gray-900/50 transition-all duration-300">
-  
-  {/* Başlangıç Tarihi */}
-  <div className="flex flex-col w-40">
-    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Başlangıç Tarihi</label>
-    <div className="relative">
-      <input
-        type="date"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-        className="w-full px-4 py-2 pl-10 rounded-lg border border-gray-300 dark:border-gray-600 
-                   bg-white/70 dark:bg-gray-800/70 text-gray-900 dark:text-white shadow-sm 
-                   focus:ring-2 focus:ring-green-400 focus:border-green-500 outline-none 
-                   transition-all duration-300 hover:shadow-md"
-      />
-      {/* Tarih ikonu */}
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 absolute left-3 top-2.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    </div>
-  </div>
-
-  {/* Bitiş Tarihi */}
-  <div className="flex flex-col w-40">
-    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Bitiş Tarihi</label>
-    <div className="relative">
-      <input
-        type="date"
-        value={endDate}
-        onChange={(e) => setEndDate(e.target.value)}
-        className="w-full px-4 py-2 pl-10 rounded-lg border border-gray-300 dark:border-gray-600 
-                   bg-white/70 dark:bg-gray-800/70 text-gray-900 dark:text-white shadow-sm 
-                   focus:ring-2 focus:ring-green-400 focus:border-green-500 outline-none 
-                   transition-all duration-300 hover:shadow-md"
-      />
-      {/* Tarih ikonu */}
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 absolute left-3 top-2.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    </div>
-  </div>
-
-</div>
-
+                {/* Tarih Filtresi Bölümü - Yeni Konum ve Estetik Görünüm */}
+                <div className="flex flex-wrap items-center justify-center gap-4 mb-6 p-4 rounded-xl shadow-md border-solid border-2 border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium">Başlangıç Tarihi</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium">Bitiş Tarihi</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                        />
+                    </div>
+                </div>
 
                 {/* Takıma özel maç listesi */}
-<div className="match-list-container bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-  <h2 className="match-list-title text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Oynanan Maçlar</h2>
-  
-  {/* Tabloyu saran scroll alanı */}
-  <div className="overflow-x-auto">
-    <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-      
-      <table className="min-w-full table-auto text-left">
-        <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-          <tr className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            <th className="px-4 py-3">Tarih</th>
-            <th className="px-4 py-3">Rakip</th>
-            <th className="px-4 py-3">Skor</th>
-            <th className="px-4 py-3">Sonuç</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teamMatches.length > 0 ? (
-            teamMatches.map((m) => {
-              const opponent = teams.find(t => 
-                (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id)
-              );
-              const score = m.final_score || '0-0';
-              const [h, a] = score.split('-').map(Number);
-              let result = h === a ? 'Beraberlik' 
-                          : ((m.home_team_id === selectedTeam.id && h > a) || 
-                             (m.away_team_id === selectedTeam.id && a > h)) 
-                          ? 'Galibiyet' : 'Mağlubiyet';
-              
-              return (
-                <tr key={m.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                  <td className="px-4 py-3 text-sm">{m.date}</td>
-                  <td className="px-4 py-3 text-sm">{opponent?.name || 'Bilinmiyor'}</td>
-                  <td className="px-4 py-3 text-sm">{score}</td>
-                  <td className={`px-4 py-3 text-sm font-semibold ${
-                    result === 'Galibiyet' ? 'text-green-500' :
-                    result === 'Mağlubiyet' ? 'text-red-500' : 'text-yellow-500'
-                  }`}>
-                    {result}
-                  </td>
-                </tr>
-              );
-            })
-          ) : (
-            <tr>
-              <td colSpan="4" className="px-4 py-3 text-center italic text-gray-500">
-                Seçilen tarih aralığında maç bulunamadı.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-
-    </div>
-  </div>
-</div>
-
+                <div className="match-list-container">
+                  <h2 className="match-list-title">Oynanan Maçlar</h2>
+                  <div className="overflow-x-auto">
+                    <div className="max-h-96 overflow-y-auto"> {/* Maç listesi için scroll özelliği */}
+                      <table className="match-list-table">
+                        <thead>
+                          <tr className="table-header sticky top-0"> {/* Başlıkların sabit kalması için */}
+                            <th>Tarih</th>
+                            <th>Rakip</th>
+                            <th>Skor</th>
+                            <th>Sonuç</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamMatches.length > 0 ? (
+                            teamMatches.map(m => {
+                              const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
+                              const score = m.final_score || '0 - 0'; // Hata düzeltmesi
+                              const [h, a] = score.split(' - ').map(Number);
+                              let result;
+                              if (h === a) {
+                                result = 'Beraberlik';
+                              } else if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
+                                result = 'Galibiyet';
+                              } else {
+                                result = 'Mağlubiyet';
+                              }
+                              return (
+                                <tr key={m.id} className="table-row">
+                                  <td className="table-cell">{m.date}</td>
+                                  <td className="table-cell">{opponent?.name || 'Bilinmiyor'}</td>
+                                  <td className="table-cell">{score}</td>
+                                  <td className={`table-cell cell-result ${
+                                    result === 'Galibiyet' ? 'result-win' :
+                                    result === 'Mağlubiyet' ? 'result-loss' : 'result-draw'
+                                  }`}>
+                                    {result}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                                <td colSpan="4" className="table-cell text-center italic text-gray-500">
+                                    Seçilen tarih aralığında maç bulunamadı.
+                                </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               // Genel ligler görünümü
               <div className="stats-grid">
@@ -930,11 +900,11 @@ const App = () => {
                   <Bar data={generalChart4Data} />
                 </ChartCard>
               </div>
-            )
-              }
+            )}
           </div>
         </main>
       </div>
+    </>
   );
 }
 
