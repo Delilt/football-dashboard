@@ -28,13 +28,10 @@ ChartJS.register(
 
 /*
   Bu kod, futbol ligi istatistiklerini gösteren bir dashboard uygulamasıdır.
-  Kullanıcının isteği üzerine sidebar tamamen kaldırıldı.
-  Loading ekranı daha animasyonlu ve estetik hale getirildi.
-  Grafik verileri, kullanıcının sağladığı yeni JSON yapısına göre yeniden hesaplanarak
-  daha anlamlı istatistikler oluşturuldu.
-  Bu versiyon, stillendirme için yine component içerisinde yer alan
-  bir <style jsx> etiketi kullanır.
-  Son olarak, "TypeError: Cannot read properties of null (reading 'split')" hatası,
+  Kullanıcının isteği üzerine loading ekranının görünmeme sorunu giderildi.
+  "app-loading-screen" bileşenine fixed position ve yüksek z-index değeri eklenerek
+  diğer bileşenlerin üzerinde daima görünmesi sağlandı.
+  Hala daha "TypeError: Cannot read properties of null (reading 'split')" hatası,
   veri alanlarının null olup olmadığı kontrol edilerek giderildi.
 */
 
@@ -386,10 +383,16 @@ const App = () => {
         }
         
         .app-loading-screen, .app-error-screen {
+          /* Yükleme ekranı için yapılan düzeltme */
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 100; /* En üst katmanda görünmesini sağlar */
           display: flex;
           align-items: center;
           justify-content: center;
-          min-height: 100vh;
           transition: background-color 0.3s;
           background-color: var(--bg-color);
           color: var(--text-color);
@@ -449,6 +452,7 @@ const App = () => {
         }
         
         .main-content {
+          margin:0;
           flex: 1;
           display: flex;
           flex-direction: column;
