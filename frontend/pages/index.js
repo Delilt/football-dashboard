@@ -34,6 +34,8 @@ ChartJS.register(
   daha anlamlı istatistikler oluşturuldu.
   Bu versiyon, stillendirme için yine component içerisinde yer alan
   bir <style jsx> etiketi kullanır.
+  Son olarak, "TypeError: Cannot read properties of null (reading 'split')" hatası,
+  veri alanlarının null olup olmadığı kontrol edilerek giderildi.
 */
 
 const API_BASE = "https://football-dashboard.onrender.com";
@@ -166,7 +168,9 @@ const App = () => {
     const leagueMatches = matches.filter(m => m.league === league);
     let wins = 0, draws = 0, losses = 0;
     leagueMatches.forEach(m => {
-      const [h, a] = m.final_score.split('-').map(Number);
+      // Güvenli split işlemi için null kontrolü eklendi
+      const finalScore = m.final_score || '0 - 0';
+      const [h, a] = finalScore.split(' - ').map(Number);
       if (h > a) wins++;
       else if (h < a) losses++;
       else draws++;
@@ -183,8 +187,17 @@ const App = () => {
   };
 
   // Genel Grafik 3: İlk Yarı ve Final Golleri
-  const totalFirstHalfGoals = matches.reduce((acc, m) => acc + m.first_half_score.split(' - ').map(Number).reduce((sum, g) => sum + g, 0), 0);
-  const totalSecondHalfGoals = matches.reduce((acc, m) => acc + (m.final_score.split(' - ').map(Number).reduce((sum, g) => sum + g, 0) - m.first_half_score.split(' - ').map(Number).reduce((sum, g) => sum + g, 0)), 0);
+  const totalFirstHalfGoals = matches.reduce((acc, m) => {
+    const firstHalfScore = m.first_half_score || '0 - 0';
+    return acc + firstHalfScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
+  }, 0);
+  const totalSecondHalfGoals = matches.reduce((acc, m) => {
+    const finalScore = m.final_score || '0 - 0';
+    const firstHalfScore = m.first_half_score || '0 - 0';
+    const finalGoals = finalScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
+    const firstHalfGoals = firstHalfScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
+    return acc + (finalGoals - firstHalfGoals);
+  }, 0);
   const generalChart3Data = {
     labels: ['İlk Yarı Golleri', 'İkinci Yarı Golleri'],
     datasets: [{
@@ -215,7 +228,8 @@ const App = () => {
   
   // Takıma özel galibiyet, beraberlik, mağlubiyet verileri
   const teamWinRates = selectedTeam ? teamMatches.reduce((acc, m) => {
-    const [h, a] = m.final_score.split(' - ').map(Number);
+    const finalScore = m.final_score || '0 - 0';
+    const [h, a] = finalScore.split(' - ').map(Number);
     if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
       acc.wins++;
     } else if (h === a) {
@@ -229,7 +243,8 @@ const App = () => {
   // Takıma özel aylık goller
   const monthlyGoals = selectedTeam ? teamMatches.reduce((acc, m) => {
     const month = new Date(m.date).toLocaleString('tr-TR', { month: 'long' });
-    const goals = m.home_team_id === selectedTeam.id ? +m.final_score.split(' - ')[0] : +m.final_score.split(' - ')[1];
+    const finalScore = m.final_score || '0 - 0';
+    const goals = m.home_team_id === selectedTeam.id ? +finalScore.split(' - ')[0] : +finalScore.split(' - ')[1];
     if (acc[month]) {
       acc[month] += goals;
     } else {
@@ -244,15 +259,35 @@ const App = () => {
     .map(month => ({ month, goals: monthlyGoals[month] }));
 
   // Takıma özel ev ve deplasman performans verileri
-  const homeWins = teamMatches.filter(m => m.home_team_id === selectedTeam.id && +m.final_score.split(' - ')[0] > +m.final_score.split(' - ')[1]).length;
-  const awayWins = teamMatches.filter(m => m.away_team_id === selectedTeam.id && +m.final_score.split(' - ')[1] > +m.final_score.split(' - ')[0]).length;
-  const homeLosses = teamMatches.filter(m => m.home_team_id === selectedTeam.id && +m.final_score.split(' - ')[0] < +m.final_score.split(' - ')[1]).length;
-  const awayLosses = teamMatches.filter(m => m.away_team_id === selectedTeam.id && +m.final_score.split(' - ')[1] < +m.final_score.split(' - ')[0]).length;
+  const homeWins = teamMatches.filter(m => {
+    const finalScore = m.final_score || '0 - 0';
+    return m.home_team_id === selectedTeam.id && +finalScore.split(' - ')[0] > +finalScore.split(' - ')[1];
+  }).length;
+  const awayWins = teamMatches.filter(m => {
+    const finalScore = m.final_score || '0 - 0';
+    return m.away_team_id === selectedTeam.id && +finalScore.split(' - ')[1] > +finalScore.split(' - ')[0];
+  }).length;
+  const homeLosses = teamMatches.filter(m => {
+    const finalScore = m.final_score || '0 - 0';
+    return m.home_team_id === selectedTeam.id && +finalScore.split(' - ')[0] < +finalScore.split(' - ')[1];
+  }).length;
+  const awayLosses = teamMatches.filter(m => {
+    const finalScore = m.final_score || '0 - 0';
+    return m.away_team_id === selectedTeam.id && +finalScore.split(' - ')[1] < +finalScore.split(' - ')[0];
+  }).length;
   
   // Takıma özel ilk yarı ve ikinci yarı golleri
-  const teamFirstHalfGoals = teamMatches.reduce((acc, m) => acc + (m.home_team_id === selectedTeam.id ? +m.first_half_score.split(' - ')[0] : +m.first_half_score.split(' - ')[1]), 0);
-  const teamSecondHalfGoals = teamMatches.reduce((acc, m) => acc + ( (m.home_team_id === selectedTeam.id ? +m.final_score.split(' - ')[0] : +m.final_score.split(' - ')[1]) - (m.home_team_id === selectedTeam.id ? +m.first_half_score.split(' - ')[0] : +m.first_half_score.split(' - ')[1]) ), 0);
-
+  const teamFirstHalfGoals = teamMatches.reduce((acc, m) => {
+    const firstHalfScore = m.first_half_score || '0 - 0';
+    return acc + (m.home_team_id === selectedTeam.id ? +firstHalfScore.split(' - ')[0] : +firstHalfScore.split(' - ')[1]);
+  }, 0);
+  const teamSecondHalfGoals = teamMatches.reduce((acc, m) => {
+    const finalScore = m.final_score || '0 - 0';
+    const firstHalfScore = m.first_half_score || '0 - 0';
+    const teamFinalGoals = m.home_team_id === selectedTeam.id ? +finalScore.split(' - ')[0] : +finalScore.split(' - ')[1];
+    const teamFirstHalfGoals = m.home_team_id === selectedTeam.id ? +firstHalfScore.split(' - ')[0] : +firstHalfScore.split(' - ')[1];
+    return acc + (teamFinalGoals - teamFirstHalfGoals);
+  }, 0);
 
   // Takıma Özel Grafik 1: Galibiyet, Beraberlik, Mağlubiyet Oranı
   const teamChart1Data = {
@@ -760,7 +795,7 @@ const App = () => {
                       <tbody>
                         {teamMatches.map(m => {
                           const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
-                          const score = m.final_score;
+                          const score = m.final_score || '0 - 0'; // Hata düzeltmesi
                           const [h, a] = score.split(' - ').map(Number);
                           let result;
                           if (h === a) {
