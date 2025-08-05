@@ -12,8 +12,9 @@ import {
   Legend
 } from 'chart.js';
 import { Bar, Pie, Line, Radar } from 'react-chartjs-2';
-import { LuSearch, LuSun, LuMoon, LuMenu } from 'react-icons/lu';
-import { FaFutbol } from 'react-icons/fa';
+
+// React-icons'u Next.js'de kullanmak için Next.js'e özel bazı ayarlamalar
+// gerekebilir. Bu durumdan kaçınmak için SVG ve Unicode karakterler kullanıldı.
 
 // Chart.js bileşenlerini global olarak kaydediyoruz.
 // Next.js'deki dynamic import'a gerek kalmadan çalışacaktır.
@@ -347,13 +348,15 @@ const App = () => {
               onClick={() => setShowSidebar(!showSidebar)}
               className="lg:hidden p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 mr-4"
             >
-              <LuMenu size={24} />
+              <span className="text-2xl">☰</span>
             </button>
             <h1 className="text-2xl font-bold hidden md:block">Futbol Dashboard</h1>
           </div>
           <div className="relative flex-1 max-w-lg mx-4" ref={searchInputRef}>
             <div className="relative">
-              <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </span>
               <input
                 type="text"
                 className="w-full py-2 pl-10 pr-4 bg-gray-100 dark:bg-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -370,7 +373,7 @@ const App = () => {
                     onClick={() => handleSelectTeam(team)}
                     className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center transition-colors duration-200"
                   >
-                    <FaFutbol className="text-gray-500 mr-3" />
+                    <span className="text-gray-500 mr-3">⚽</span>
                     <span className="text-sm font-medium">{team.name}</span>
                   </div>
                 ))}
@@ -378,7 +381,7 @@ const App = () => {
             )}
           </div>
           <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200">
-            {isDarkMode ? <LuSun size={24} /> : <LuMoon size={24} />}
+            {isDarkMode ? <span className="text-2xl">🌞</span> : <span className="text-2xl">🌙</span>}
           </button>
         </header>
 
