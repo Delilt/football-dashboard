@@ -739,6 +739,63 @@ const App = () => {
         .result-draw {
           color: var(--warning-color);
         }
+        
+        /* Yeni eklenen CSS kuralları */
+        .scrollable-table-wrapper {
+          max-height: 24rem; /* max-h-96 */
+          overflow-y: auto;
+          border-radius: 0.5rem;
+          border: 1px solid var(--border-color);
+        }
+
+        .date-filter-container {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: center;
+          gap: 1rem; /* Tailwind'deki gap-4'e karşılık gelir */
+          margin-bottom: 1.5rem; /* Tailwind'deki mb-6'ya karşılık gelir */
+          padding: 1rem; /* Tailwind'deki p-4'e karşılık gelir */
+          border-radius: 0.75rem; /* Tailwind'deki rounded-xl'e karşılık gelir */
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Tailwind'deki shadow-md'ye karşılık gelir */
+          border: 2px solid var(--border-color); /* Tailwind'deki border-solid border-2 border-gray-200'e karşılık gelir */
+          transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+          background-color: var(--card-bg-color);
+        }
+
+        .date-input-group {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .date-input-label {
+          font-size: 0.875rem; /* text-sm */
+          font-weight: 500; /* font-medium */
+        }
+
+        .date-input {
+          margin-top: 0.25rem; /* mt-1 */
+          padding: 0.5rem; /* p-2 */
+          border: 1px solid var(--border-color); /* border border-gray-300 */
+          border-radius: 0.375rem; /* rounded-md */
+          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+          outline: none;
+          transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s, color 0.2s;
+          background-color: var(--card-bg-color);
+          color: var(--text-color);
+        }
+
+        .date-input:focus {
+          border-color: #22c55e; /* focus:ring-green-500 */
+          box-shadow: 0 0 0 2px #22c55e, 0 0 0 4px rgba(34, 197, 94, 0.25); /* focus:ring-2 focus:ring-green-500 */
+        }
+
+        /* Dark mode specific styles for date inputs */
+        .dark .date-input {
+          border-color: var(--border-color); /* dark:border-gray-600 */
+          background-color: var(--search-bg-color); /* dark:bg-gray-800 */
+          color: var(--search-text-color); /* dark:text-white */
+        }
       `}</style>
       <div className={`app-container ${isDarkMode ? 'dark' : ''}`}>
         {/* Ana İçerik */}
@@ -808,86 +865,81 @@ const App = () => {
                 </div>
 
                 {/* Tarih Filtresi Bölümü - Yeni Konum ve Estetik Görünüm */}
-                <div className="flex flex-wrap items-center justify-center gap-4 mb-6 p-4 rounded-xl shadow-md border-solid border-2 border-gray-200 dark:border-gray-700">
-                    <div className="flex flex-col">
-                        <label className="text-sm font-medium">Başlangıç Tarihi</label>
+                <div className="date-filter-container">
+                    <div className="date-input-group">
+                        <label className="date-input-label">Başlangıç Tarihi</label>
                         <input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                            className="date-input"
                         />
                     </div>
-                    <div className="flex flex-col">
-                        <label className="text-sm font-medium">Bitiş Tarihi</label>
+                    <div className="date-input-group">
+                        <label className="date-input-label">Bitiş Tarihi</label>
                         <input
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                            className="date-input"
                         />
                     </div>
                 </div>
 
                 {/* Takıma özel maç listesi */}
-                <div className="match-list-container bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-  <h2 className="match-list-title text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
-    Oynanan Maçlar
-  </h2>
-
-  {/* Scroll Özelliği Olan Wrapper */}
-  <div className="overflow-x-auto">
-    <div className="max-h-[400px] overflow-y-scroll border border-gray-200 dark:border-gray-700 rounded-lg">
-      
-      <table className="min-w-full table-auto text-left">
-        <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
-          <tr className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            <th className="px-4 py-3">Tarih</th>
-            <th className="px-4 py-3">Rakip</th>
-            <th className="px-4 py-3">Skor</th>
-            <th className="px-4 py-3">Sonuç</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teamMatches.length > 0 ? (
-            teamMatches.map((m) => {
-              const opponent = teams.find(t =>
-                m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id
-              );
-              const score = m.final_score || '0-0';
-              const [h, a] = score.split('-').map(Number);
-              const result =
-                h === a ? 'Beraberlik' :
-                ((m.home_team_id === selectedTeam.id && h > a) || 
-                 (m.away_team_id === selectedTeam.id && a > h)) ? 'Galibiyet' : 'Mağlubiyet';
-
-              return (
-                <tr key={m.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                  <td className="px-4 py-3 text-sm">{m.date}</td>
-                  <td className="px-4 py-3 text-sm">{opponent?.name || 'Bilinmiyor'}</td>
-                  <td className="px-4 py-3 text-sm">{score}</td>
-                  <td className={`px-4 py-3 text-sm font-semibold ${
-                    result === 'Galibiyet' ? 'text-green-500' :
-                    result === 'Mağlubiyet' ? 'text-red-500' : 'text-yellow-500'
-                  }`}>
-                    {result}
-                  </td>
-                </tr>
-              );
-            })
-          ) : (
-            <tr>
-              <td colSpan="4" className="px-4 py-3 text-center italic text-gray-500">
-                Seçilen tarih aralığında maç bulunamadı.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-
-    </div>
-  </div>
-</div>
+                <div className="match-list-container">
+                  <h2 className="match-list-title">Oynanan Maçlar</h2>
+                  <div className="overflow-x-auto">
+                    <div className="scrollable-table-wrapper"> {/* Maç listesi için scroll özelliği */}
+                      <table className="match-list-table">
+                        <thead>
+                          <tr className="table-header sticky top-0"> {/* Başlıkların sabit kalması için */}
+                            <th>Tarih</th>
+                            <th>Rakip</th>
+                            <th>Skor</th>
+                            <th>Sonuç</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamMatches.length > 0 ? (
+                            teamMatches.map(m => {
+                              const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
+                              const score = m.final_score || '0 - 0'; // Hata düzeltmesi
+                              const [h, a] = score.split(' - ').map(Number);
+                              let result;
+                              if (h === a) {
+                                result = 'Beraberlik';
+                              } else if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
+                                result = 'Galibiyet';
+                              } else {
+                                result = 'Mağlubiyet';
+                              }
+                              return (
+                                <tr key={m.id} className="table-row">
+                                  <td className="table-cell">{m.date}</td>
+                                  <td className="table-cell">{opponent?.name || 'Bilinmiyor'}</td>
+                                  <td className="table-cell">{score}</td>
+                                  <td className={`table-cell cell-result ${
+                                    result === 'Galibiyet' ? 'result-win' :
+                                    result === 'Mağlubiyet' ? 'result-loss' : 'result-draw'
+                                  }`}>
+                                    {result}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                                <td colSpan="4" className="table-cell text-center italic text-gray-500">
+                                    Seçilen tarih aralığında maç bulunamadı.
+                                </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               // Genel ligler görünümü
