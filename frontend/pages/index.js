@@ -35,7 +35,8 @@ ChartJS.register(
   Mevcut API'dan alınan verilerle Chart.js kütüphanesi kullanılarak
   dinamik ve interaktif grafikler oluşturulmuştur.
   Kullanıcı deneyimini artırmak için gelişmiş arama ve yükleme ekranı eklenmiştir.
-  Tailwind CSS ile modern ve duyarlı bir tasarım sağlanmıştır.
+  Bu versiyon, stillendirme için Tailwind CSS yerine, component içerisinde yer alan
+  bir <style> etiketi kullanır.
 */
 
 const API_BASE = "https://football-dashboard.onrender.com";
@@ -122,10 +123,10 @@ const App = () => {
   // Yükleme ekranı
   if (isLoading) {
     return (
-      <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-        <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-green-500"></div>
-          <p className="mt-4 text-xl font-semibold">Veriler Yükleniyor...</p>
+      <div className={`app-loading-screen ${isDarkMode ? 'dark' : ''}`}>
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <p className="loading-text">Veriler Yükleniyor...</p>
         </div>
       </div>
     );
@@ -134,10 +135,10 @@ const App = () => {
   // Hata ekranı
   if (error) {
     return (
-      <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-        <div className="text-center p-8 bg-red-600 text-white rounded-lg shadow-xl">
-          <p className="text-2xl font-bold">❌ Hata Oluştu</p>
-          <p className="mt-2">Veriler yüklenirken bir sorunla karşılaşıldı: {error.message}</p>
+      <div className={`app-error-screen ${isDarkMode ? 'dark' : ''}`}>
+        <div className="error-message-box">
+          <p className="error-title">❌ Hata Oluştu</p>
+          <p className="error-text">Veriler yüklenirken bir sorunla karşılaşıldı: {error.message}</p>
         </div>
       </div>
     );
@@ -314,169 +315,599 @@ const App = () => {
 
   // Yardımcı bileşen: Grafik Kartı
   const ChartCard = ({ title, children }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 flex flex-col justify-between">
-      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>
-      <div className="w-full h-80 flex items-center justify-center">
+    <div className="chart-card">
+      <h2 className="chart-title">{title}</h2>
+      <div className="chart-container">
         {children}
       </div>
     </div>
   );
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} h-screen flex transition-colors duration-300 overflow-hidden`}>
-      {/* Sidebar - Sadece takım arama modunda göster */}
-      <aside className={`fixed z-20 h-full w-64 bg-gray-100 dark:bg-gray-900 p-6 transition-transform duration-300 ease-in-out lg:translate-x-0 ${showSidebar ? 'translate-x-0' : '-translate-x-full'}`}>
-        <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">Ligler</h2>
-        <nav>
-          <ul>
-            {leagues.map(l => (
-              <li key={l} className="mb-2">
-                <a onClick={handleReset} className="block p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer">
-                  {l}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
+    <>
+      <style jsx>{`
+        :root {
+          --bg-color: #f3f4f6;
+          --text-color: #111827;
+          --card-bg-color: #ffffff;
+          --shadow-color: rgba(0, 0, 0, 0.1);
+          --header-bg-color: #ffffff;
+          --search-bg-color: #e5e7eb;
+          --search-text-color: #4b5563;
+          --border-color: #e5e7eb;
+          --hover-color: #e5e7eb;
+          --success-color: #10b981;
+          --error-color: #ef4444;
+          --warning-color: #f59e0b;
+        }
+        
+        .dark {
+          --bg-color: #111827;
+          --text-color: #f3f4f6;
+          --card-bg-color: #1f2937;
+          --shadow-color: rgba(0, 0, 0, 0.2);
+          --header-bg-color: #1f2937;
+          --search-bg-color: #374151;
+          --search-text-color: #9ca3af;
+          --border-color: #4b5563;
+          --hover-color: #374151;
+        }
 
-      {/* Ana İçerik */}
-      <main className="flex-1 flex flex-col min-h-screen lg:ml-64 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-        <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white dark:bg-gray-800 shadow-md">
-          <div className="flex items-center">
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="lg:hidden p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 mr-4"
-            >
-              <span className="text-2xl">☰</span>
-            </button>
-            <h1 className="text-2xl font-bold hidden md:block">Futbol Dashboard</h1>
-          </div>
-          <div className="relative flex-1 max-w-lg mx-4" ref={searchInputRef}>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              </span>
-              <input
-                type="text"
-                className="w-full py-2 pl-10 pr-4 bg-gray-100 dark:bg-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Takım ara..."
-                value={searchTeam}
-                onChange={e => setSearchTeam(e.target.value)}
-              />
+        .app-container {
+          height: 100vh;
+          display: flex;
+          transition: background-color 0.3s;
+          overflow: hidden;
+          background-color: var(--bg-color);
+          color: var(--text-color);
+        }
+        
+        .app-loading-screen, .app-error-screen {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          transition: background-color 0.3s;
+          background-color: var(--bg-color);
+          color: var(--text-color);
+        }
+
+        .loading-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        .loading-spinner {
+          width: 4rem;
+          height: 4rem;
+          border: 4px dashed #22c55e;
+          border-radius: 9999px;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+          margin-top: 1rem;
+          font-size: 1.25rem;
+          font-weight: 600;
+        }
+        
+        .error-message-box {
+          text-align: center;
+          padding: 2rem;
+          background-color: #dc2626;
+          color: #ffffff;
+          border-radius: 0.5rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .error-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+        
+        .error-text {
+          margin-top: 0.5rem;
+        }
+        
+        .app-sidebar {
+          position: fixed;
+          z-index: 20;
+          height: 100%;
+          width: 16rem;
+          padding: 1.5rem;
+          background-color: var(--card-bg-color);
+          color: var(--text-color);
+          transition: transform 0.3s ease-in-out;
+          transform: translateX(-100%);
+        }
+        
+        .app-sidebar.show {
+          transform: translateX(0);
+        }
+        
+        .sidebar-title {
+          font-size: 1.875rem;
+          font-weight: 700;
+          margin-bottom: 1.5rem;
+        }
+
+        .sidebar-nav-item {
+          margin-bottom: 0.5rem;
+        }
+
+        .sidebar-nav-link {
+          display: block;
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .sidebar-nav-link:hover {
+          background-color: var(--hover-color);
+        }
+        
+        .main-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+          margin-left: 0;
+          background-color: var(--bg-color);
+          color: var(--text-color);
+          transition: all 0.3s;
+        }
+        
+        @media (min-width: 1024px) {
+          .app-sidebar {
+            transform: translateX(0);
+          }
+          
+          .main-content {
+            margin-left: 16rem;
+          }
+        }
+        
+        .app-header {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1rem;
+          background-color: var(--header-bg-color);
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .header-content {
+          display: flex;
+          align-items: center;
+        }
+        
+        .header-menu-button {
+          padding: 0.5rem;
+          border-radius: 9999px;
+          transition: background-color 0.2s;
+          margin-right: 1rem;
+        }
+        
+        @media (min-width: 1024px) {
+          .header-menu-button {
+            display: none;
+          }
+        }
+        
+        .header-menu-button:hover {
+          background-color: var(--hover-color);
+        }
+        
+        .header-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+
+        @media (max-width: 767px) {
+          .header-title {
+            display: none;
+          }
+        }
+        
+        .search-container {
+          position: relative;
+          flex: 1;
+          max-width: 32rem;
+          margin-left: 1rem;
+          margin-right: 1rem;
+        }
+        
+        .search-box {
+          position: relative;
+        }
+        
+        .search-icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--search-text-color);
+        }
+        
+        .search-input {
+          width: 100%;
+          padding-top: 0.5rem;
+          padding-bottom: 0.5rem;
+          padding-left: 2.5rem;
+          padding-right: 1rem;
+          background-color: var(--search-bg-color);
+          border-radius: 9999px;
+          border: none;
+        }
+        
+        .search-input:focus {
+          outline: none;
+          ring: 2px solid #22c55e;
+          ring-opacity: 0.5;
+        }
+
+        .search-suggestions {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          z-index: 30;
+          margin-top: 0.5rem;
+          background-color: var(--card-bg-color);
+          border-radius: 0.5rem;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          border: 1px solid var(--border-color);
+          max-height: 15rem;
+          overflow-y: auto;
+        }
+
+        .suggestion-item {
+          padding: 0.75rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          transition: background-color 0.2s;
+        }
+
+        .suggestion-item:hover {
+          background-color: var(--hover-color);
+        }
+
+        .suggestion-icon {
+          color: var(--search-text-color);
+          margin-right: 0.75rem;
+        }
+
+        .suggestion-text {
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+        
+        .theme-toggle-button {
+          padding: 0.5rem;
+          border-radius: 9999px;
+          transition: background-color 0.2s;
+        }
+        
+        .theme-toggle-button:hover {
+          background-color: var(--hover-color);
+        }
+        
+        .main-content-inner {
+          flex: 1;
+          overflow: auto;
+          padding: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+          .main-content-inner {
+            padding: 2rem;
+          }
+        }
+        
+        .team-stats-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 2rem;
+        }
+        
+        .team-stats-title {
+          font-size: 1.875rem;
+          font-weight: 700;
+        }
+        
+        .back-button {
+          background-color: #22c55e;
+          color: #ffffff;
+          font-weight: 700;
+          padding: 0.5rem 1rem;
+          border-radius: 9999px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          transition: transform 0.2s;
+        }
+        
+        .back-button:hover {
+          background-color: #15803d;
+        }
+
+        .back-button:active {
+          transform: scale(0.95);
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(1, minmax(0, 1fr));
+          gap: 2rem;
+          margin-bottom: 2rem;
+        }
+
+        @media (min-width: 768px) {
+          .stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        .chart-card {
+          background-color: var(--card-bg-color);
+          border-radius: 1rem;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        
+        .chart-title {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 1rem;
+          color: var(--text-color);
+        }
+        
+        .chart-container {
+          width: 100%;
+          height: 20rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .match-list-container {
+          background-color: var(--card-bg-color);
+          border-radius: 1rem;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          padding: 1.5rem;
+        }
+        
+        .match-list-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-bottom: 1rem;
+          color: var(--text-color);
+        }
+
+        .match-list-table {
+          min-width: 100%;
+          table-layout: auto;
+          text-align: left;
+        }
+
+        .table-header {
+          background-color: var(--hover-color);
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+
+        .table-header th {
+          padding: 0.75rem 1rem;
+          color: #4b5563;
+        }
+        
+        .dark .table-header th {
+          color: #d1d5db;
+        }
+
+        .table-header th:first-child {
+          border-top-left-radius: 0.5rem;
+        }
+
+        .table-header th:last-child {
+          border-top-right-radius: 0.5rem;
+        }
+
+        .table-row {
+          border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-row:last-child {
+          border-bottom: none;
+        }
+
+        .table-cell {
+          padding: 0.75rem 1rem;
+          font-size: 0.875rem;
+        }
+
+        .cell-result {
+          font-weight: 600;
+        }
+
+        .result-win {
+          color: #10b981;
+        }
+        .result-loss {
+          color: #ef4444;
+        }
+        .result-draw {
+          color: #f59e0b;
+        }
+      `}</style>
+      <div className={`app-container ${isDarkMode ? 'dark' : ''}`}>
+        {/* Sidebar - Sadece takım arama modunda göster */}
+        <aside className={`app-sidebar ${showSidebar ? 'show' : ''}`}>
+          <h2 className="sidebar-title">Ligler</h2>
+          <nav>
+            <ul>
+              {leagues.map(l => (
+                <li key={l} className="sidebar-nav-item">
+                  <a onClick={handleReset} className="sidebar-nav-link">
+                    {l}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </aside>
+
+        {/* Ana İçerik */}
+        <main className="main-content">
+          <header className="app-header">
+            <div className="header-content">
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="header-menu-button"
+              >
+                <span className="text-2xl">☰</span>
+              </button>
+              <h1 className="header-title">Futbol Dashboard</h1>
             </div>
-            {suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 z-30 mt-2 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 max-h-60 overflow-y-auto">
-                {suggestions.map((team) => (
-                  <div
-                    key={team.id}
-                    onClick={() => handleSelectTeam(team)}
-                    className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center transition-colors duration-200"
-                  >
-                    <span className="text-gray-500 mr-3">⚽</span>
-                    <span className="text-sm font-medium">{team.name}</span>
+            <div className="search-container" ref={searchInputRef}>
+              <div className="search-box">
+                <span className="search-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </span>
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Takım ara..."
+                  value={searchTeam}
+                  onChange={e => setSearchTeam(e.target.value)}
+                />
+              </div>
+              {suggestions.length > 0 && (
+                <div className="search-suggestions">
+                  {suggestions.map((team) => (
+                    <div
+                      key={team.id}
+                      onClick={() => handleSelectTeam(team)}
+                      className="suggestion-item"
+                    >
+                      <span className="suggestion-icon">⚽</span>
+                      <span className="suggestion-text">{team.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={toggleTheme} className="theme-toggle-button">
+              {isDarkMode ? <span className="text-2xl">🌞</span> : <span className="text-2xl">🌙</span>}
+            </button>
+          </header>
+
+          <div className="main-content-inner">
+            {selectedTeam ? (
+              <div>
+                {/* Takım adı başlığı ve geri dön butonu */}
+                <div className="team-stats-header">
+                  <h2 className="team-stats-title">{selectedTeam.name} İstatistikleri</h2>
+                  <button onClick={handleReset} className="back-button">
+                    Geri Dön
+                  </button>
+                </div>
+
+                {/* Takıma özel grafikler */}
+                <div className="stats-grid">
+                  <ChartCard title={`${selectedTeam.name} Galibiyet, Beraberlik, Mağlubiyet Oranı`}>
+                    <Pie data={teamChart1Data} />
+                  </ChartCard>
+                  <ChartCard title={`${selectedTeam.name} Aylık Atılan Goller`}>
+                    <Line data={teamChart2Data} />
+                  </ChartCard>
+                  <ChartCard title={`${selectedTeam.name} Ev ve Deplasman Performansı`}>
+                    <Bar data={teamPerformance} />
+                  </ChartCard>
+                  <ChartCard title={`${selectedTeam.name} Ev/Deplasman Golleri`}>
+                    <Radar data={teamChart4Data} />
+                  </ChartCard>
+                </div>
+
+                {/* Takıma özel maç listesi */}
+                <div className="match-list-container">
+                  <h2 className="match-list-title">Oynanan Maçlar</h2>
+                  <div className="overflow-x-auto">
+                    <table className="match-list-table">
+                      <thead>
+                        <tr className="table-header">
+                          <th className="rounded-tl-xl">Tarih</th>
+                          <th>Rakip</th>
+                          <th>Skor</th>
+                          <th className="rounded-tr-xl">Sonuç</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teamMatches.map(m => {
+                          const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
+                          const score = m.final_score;
+                          const [h, a] = score.split('-').map(Number);
+                          let result;
+                          if (h === a) {
+                            result = 'Beraberlik';
+                          } else if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
+                            result = 'Galibiyet';
+                          } else {
+                            result = 'Mağlubiyet';
+                          }
+                          return (
+                            <tr key={m.id} className="table-row">
+                              <td className="table-cell">{m.match_date}</td>
+                              <td className="table-cell">{opponent?.name || 'Bilinmiyor'}</td>
+                              <td className="table-cell">{score}</td>
+                              <td className={`table-cell cell-result ${
+                                result === 'Galibiyet' ? 'result-win' :
+                                result === 'Mağlubiyet' ? 'result-loss' : 'result-draw'
+                              }`}>
+                                {result}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
+                </div>
+              </div>
+            ) : (
+              // Genel ligler görünümü
+              <div className="stats-grid">
+                <ChartCard title="Liglerde Oynanan Toplam Maç">
+                  <Bar data={generalChart1Data} />
+                </ChartCard>
+                <ChartCard title="Liglerin En Golcü Takımları">
+                  <Bar data={generalChart2Data} />
+                </ChartCard>
+                <ChartCard title="Liglerin Galibiyet/Beraberlik/Mağlubiyet Oranları">
+                  <Bar data={generalChart3Data} />
+                </ChartCard>
+                <ChartCard title="Liglerin Kırmızı Kart Sayıları">
+                  <Bar data={redCardsData} />
+                </ChartCard>
               </div>
             )}
           </div>
-          <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200">
-            {isDarkMode ? <span className="text-2xl">🌞</span> : <span className="text-2xl">🌙</span>}
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-auto p-4 md:p-8">
-          {selectedTeam ? (
-            <div className="flex flex-col gap-8">
-              {/* Takım adı başlığı ve geri dön butonu */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold">{selectedTeam.name} İstatistikleri</h2>
-                <button onClick={handleReset} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full shadow-lg transition-transform duration-200 active:scale-95">
-                  Geri Dön
-                </button>
-              </div>
-
-              {/* Takıma özel grafikler */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <ChartCard title={`${selectedTeam.name} Galibiyet, Beraberlik, Mağlubiyet Oranı`}>
-                  <Pie data={teamChart1Data} />
-                </ChartCard>
-                <ChartCard title={`${selectedTeam.name} Aylık Atılan Goller`}>
-                  <Line data={teamChart2Data} />
-                </ChartCard>
-                <ChartCard title={`${selectedTeam.name} Ev ve Deplasman Performansı`}>
-                  <Bar data={teamPerformance} />
-                </ChartCard>
-                <ChartCard title={`${selectedTeam.name} Ev/Deplasman Golleri`}>
-                  <Radar data={teamChart4Data} />
-                </ChartCard>
-              </div>
-
-              {/* Takıma özel maç listesi */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-                <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Oynanan Maçlar</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full table-auto text-left">
-                    <thead>
-                      <tr className="bg-gray-100 dark:bg-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        <th className="px-4 py-3 rounded-tl-xl">Tarih</th>
-                        <th className="px-4 py-3">Rakip</th>
-                        <th className="px-4 py-3">Skor</th>
-                        <th className="px-4 py-3 rounded-tr-xl">Sonuç</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamMatches.map(m => {
-                        const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
-                        const score = m.final_score;
-                        const [h, a] = score.split('-').map(Number);
-                        let result;
-                        if (h === a) {
-                          result = 'Beraberlik';
-                        } else if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
-                          result = 'Galibiyet';
-                        } else {
-                          result = 'Mağlubiyet';
-                        }
-                        return (
-                          <tr key={m.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
-                            <td className="px-4 py-3 text-sm">{m.match_date}</td>
-                            <td className="px-4 py-3 text-sm">{opponent?.name || 'Bilinmiyor'}</td>
-                            <td className="px-4 py-3 text-sm">{score}</td>
-                            <td className={`px-4 py-3 text-sm font-semibold ${
-                              result === 'Galibiyet' ? 'text-green-500' :
-                              result === 'Mağlubiyet' ? 'text-red-500' : 'text-yellow-500'
-                            }`}>
-                              {result}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          ) : (
-            // Genel ligler görünümü
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <ChartCard title="Liglerde Oynanan Toplam Maç">
-                <Bar data={generalChart1Data} />
-              </ChartCard>
-              <ChartCard title="Liglerin En Golcü Takımları">
-                <Bar data={generalChart2Data} />
-              </ChartCard>
-              <ChartCard title="Liglerin Galibiyet/Beraberlik/Mağlubiyet Oranları">
-                <Bar data={generalChart3Data} />
-              </ChartCard>
-              <ChartCard title="Liglerin Kırmızı Kart Sayıları">
-                <Bar data={redCardsData} />
-              </ChartCard>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 }
 
