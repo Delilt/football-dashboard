@@ -11,8 +11,8 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-// Tailwind CSS'i dahil ediyoruz.
-import 'tailwindcss/tailwind.css';
+// Tailwind CSS'i doğrudan React dosyasına dahil etmiyoruz, çünkü bu derleme hatasına neden olabilir.
+// Tailwind kurulumu genellikle proje genelinde bir CSS dosyası aracılığıyla yapılır.
 import { Bar, Pie, Line, Radar } from 'react-chartjs-2';
 
 // Chart.js bileşenlerini global olarak kaydediyoruz.
