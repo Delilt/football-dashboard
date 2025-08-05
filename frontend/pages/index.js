@@ -30,7 +30,8 @@ ChartJS.register(
   Bu kod, futbol ligi istatistiklerini gösteren bir dashboard uygulamasıdır.
   Kullanıcının isteği üzerine takım maç listesi artık sabit bir yükseklikte
   kaydırılabilir bir alanda gösterilmektedir. Ayrıca, maçları tarih aralığına
-  göre filtreleme özelliği eklenmiştir.
+  göre filtreleme özelliği eklenmiştir ve bu bölüm takım istatistikleri
+  grafiklerinin hemen altına taşınmıştır.
 */
 
 const API_BASE = "https://football-dashboard.onrender.com";
@@ -788,28 +789,6 @@ const App = () => {
                   </button>
                 </div>
                 
-                {/* Tarih Filtresi Bölümü */}
-                <div className="flex flex-wrap items-center justify-center gap-4 mb-6 p-4 rounded-xl shadow-md border-solid border-2 border-gray-200 dark:border-gray-700">
-                    <div className="flex flex-col">
-                        <label className="text-sm font-medium">Başlangıç Tarihi</label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
-                        />
-                    </div>
-                    <div className="flex flex-col">
-                        <label className="text-sm font-medium">Bitiş Tarihi</label>
-                        <input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
-                        />
-                    </div>
-                </div>
-
                 {/* Takıma özel grafikler */}
                 <div className="stats-grid">
                   <ChartCard title={`${selectedTeam.name} Galibiyet, Beraberlik, Mağlubiyet Oranı`}>
@@ -824,6 +803,28 @@ const App = () => {
                   <ChartCard title={`${selectedTeam.name} İlk Yarı ve İkinci Yarı Golleri`}>
                     <Pie data={teamChart4Data} />
                   </ChartCard>
+                </div>
+
+                {/* Tarih Filtresi Bölümü - Yeni Konum */}
+                <div className="flex flex-wrap items-center justify-center gap-4 mb-6 p-4 rounded-xl shadow-md border-solid border-2 border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium">Başlangıç Tarihi</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-sm font-medium">Bitiş Tarihi</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white transition-all"
+                        />
+                    </div>
                 </div>
 
                 {/* Takıma özel maç listesi */}
