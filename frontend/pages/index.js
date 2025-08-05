@@ -930,7 +930,8 @@ const App = () => {
                   <Bar data={generalChart4Data} />
                 </ChartCard>
               </div>
-            )}
+            )
+              }
           </div>
         </main>
       </div>
