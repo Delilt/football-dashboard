@@ -830,59 +830,64 @@ const App = () => {
                 </div>
 
                 {/* Takıma özel maç listesi */}
-                <div className="match-list-container">
-                  <h2 className="match-list-title">Oynanan Maçlar</h2>
-                  <div className="overflow-x-auto">
-                    <div className="max-h-96 overflow-y-auto"> {/* Maç listesi için scroll özelliği */}
-                      <table className="match-list-table">
-                        <thead>
-                          <tr className="table-header sticky top-0"> {/* Başlıkların sabit kalması için */}
-                            <th>Tarih</th>
-                            <th>Rakip</th>
-                            <th>Skor</th>
-                            <th>Sonuç</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {teamMatches.length > 0 ? (
-                            teamMatches.map(m => {
-                              const opponent = teams.find(t => (m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id));
-                              const score = m.final_score || '0 - 0'; // Hata düzeltmesi
-                              const [h, a] = score.split(' - ').map(Number);
-                              let result;
-                              if (h === a) {
-                                result = 'Beraberlik';
-                              } else if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
-                                result = 'Galibiyet';
-                              } else {
-                                result = 'Mağlubiyet';
-                              }
-                              return (
-                                <tr key={m.id} className="table-row">
-                                  <td className="table-cell">{m.date}</td>
-                                  <td className="table-cell">{opponent?.name || 'Bilinmiyor'}</td>
-                                  <td className="table-cell">{score}</td>
-                                  <td className={`table-cell cell-result ${
-                                    result === 'Galibiyet' ? 'result-win' :
-                                    result === 'Mağlubiyet' ? 'result-loss' : 'result-draw'
-                                  }`}>
-                                    {result}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          ) : (
-                            <tr>
-                                <td colSpan="4" className="table-cell text-center italic text-gray-500">
-                                    Seçilen tarih aralığında maç bulunamadı.
-                                </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                <div className="match-list-container bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+  <h2 className="match-list-title text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+    Oynanan Maçlar
+  </h2>
+
+  {/* Scroll Özelliği Olan Wrapper */}
+  <div className="overflow-x-auto">
+    <div className="max-h-[400px] overflow-y-scroll border border-gray-200 dark:border-gray-700 rounded-lg">
+      
+      <table className="min-w-full table-auto text-left">
+        <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
+          <tr className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <th className="px-4 py-3">Tarih</th>
+            <th className="px-4 py-3">Rakip</th>
+            <th className="px-4 py-3">Skor</th>
+            <th className="px-4 py-3">Sonuç</th>
+          </tr>
+        </thead>
+        <tbody>
+          {teamMatches.length > 0 ? (
+            teamMatches.map((m) => {
+              const opponent = teams.find(t =>
+                m.home_team_id === selectedTeam.id ? t.id === m.away_team_id : t.id === m.home_team_id
+              );
+              const score = m.final_score || '0-0';
+              const [h, a] = score.split('-').map(Number);
+              const result =
+                h === a ? 'Beraberlik' :
+                ((m.home_team_id === selectedTeam.id && h > a) || 
+                 (m.away_team_id === selectedTeam.id && a > h)) ? 'Galibiyet' : 'Mağlubiyet';
+
+              return (
+                <tr key={m.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                  <td className="px-4 py-3 text-sm">{m.date}</td>
+                  <td className="px-4 py-3 text-sm">{opponent?.name || 'Bilinmiyor'}</td>
+                  <td className="px-4 py-3 text-sm">{score}</td>
+                  <td className={`px-4 py-3 text-sm font-semibold ${
+                    result === 'Galibiyet' ? 'text-green-500' :
+                    result === 'Mağlubiyet' ? 'text-red-500' : 'text-yellow-500'
+                  }`}>
+                    {result}
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan="4" className="px-4 py-3 text-center italic text-gray-500">
+                Seçilen tarih aralığında maç bulunamadı.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+</div>
               </div>
             ) : (
               // Genel ligler görünümü
