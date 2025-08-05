@@ -33,6 +33,8 @@ ChartJS.register(
   diğer bileşenlerin üzerinde daima görünmesi sağlandı.
   Hala daha "TypeError: Cannot read properties of null (reading 'split')" hatası,
   veri alanlarının null olup olmadığı kontrol edilerek giderildi.
+  Son olarak, sayfanın ana içeriğinin etrafındaki boşluk (beyaz çerçeve) sorunu
+  body ve html etiketlerinin kenar boşlukları (margin) sıfırlanarak giderildi.
 */
 
 const API_BASE = "https://football-dashboard.onrender.com";
@@ -341,6 +343,7 @@ const App = () => {
   return (
     <>
       <style jsx>{`
+        /* Sadece bu bileşen için geçerli CSS kuralları */
         :root {
           --bg-color: #f3f4f6;
           --text-color: #111827;
@@ -368,8 +371,14 @@ const App = () => {
           --hover-color: #374151;
         }
 
+        /* Düzeltme: Body ve HTML kenar boşluklarını (margin) sıfırlıyoruz. */
+        html, body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-          margin: 0;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
         }
 
@@ -452,9 +461,7 @@ const App = () => {
         }
         
         .main-content {
-          margin:0;
-          width:100%;
-          height:100%;
+          /* Düzeltme: Kenar boşlukları sıfırlanmış body'nin içini tamamen kaplamasını sağlıyoruz. */
           flex: 1;
           display: flex;
           flex-direction: column;
