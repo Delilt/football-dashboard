@@ -664,7 +664,7 @@ const App = () => {
         
         .chart-container {
           width: 100%;
-          height: 20rem;
+          height: 14rem;
           display: flex;
           align-items: center;
           justify-content: center;
