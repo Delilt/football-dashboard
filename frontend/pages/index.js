@@ -27,11 +27,13 @@ ChartJS.register(
 );
 
 /*
-  Bu kod, futbol ligi istatistiklerini gösteren bir dashboard uygulamasıdır.
-  Kullanıcının isteği üzerine takım maç listesi artık sabit bir yükseklikte
-  kaydırılabilir bir alanda gösterilmektedir. Ayrıca, maçları tarih aralığına
-  göre filtreleme özelliği eklenmiştir ve bu bölüm takım istatistikleri
-  grafiklerinin hemen altına taşınmıştır.
+  Bu kod, "Minified React error #310" hatasını gidermek için yeniden düzenlenmiştir.
+  Hatanın ana sebebi, 'useMemo' kancasının bir 'if' koşulu içinde kullanılmasıydı.
+  Bu, React Kanca Kuralları'nı ihlal eder. Düzeltilmiş kodda, 'useMemo' kancası
+  her zaman çağrılır ve koşullu mantık, kancanın içine yerleştirilmiştir.
+
+  Ayrıca, takım seçilmediğinde genel lig istatistiklerini gösteren bir yapı
+  eklenmiştir.
 
   Bu sürümde, grafiklerin gereksiz yere yeniden çizilmesini önlemek için
   React'in useMemo hook'u kullanılmıştır.
@@ -111,6 +113,9 @@ const App = () => {
     setSelectedTeam(team);
     setSearchTeam('');
     setSuggestions([]);
+    // Takım seçildiğinde tarih filtrelerini de sıfırla
+    setStartDate('');
+    setEndDate('');
   };
 
   // Genel görünüme dönme
@@ -231,16 +236,21 @@ const App = () => {
     };
   }, [matches]);
 
+
   // --- Takıma Özel Veri Hesaplama (useMemo ile optimize edildi) ---
   // Bu hesaplamalar sadece 'selectedTeam', 'matches', 'startDate' veya 'endDate' değiştiğinde tekrar çalışır.
+  // ÖNEMLİ DÜZELTME: useMemo kancasının kendisi bir koşul içinde olamaz.
   const { teamMatches, teamChart1Data, teamChart2Data, teamPerformanceData, teamChart4Data } = useMemo(() => {
+    // Koşullu mantık buraya, kancanın içine taşındı.
     if (!selectedTeam) {
       return {
         teamMatches: [],
-        teamChart1Data: {},
-        teamChart2Data: {},
-        teamPerformanceData: {},
-        teamChart4Data: {}
+        // Boş bir nesne döndürmek yerine, grafiklerin hata vermemesi için
+        // geçerli boş veri yapıları döndürülmelidir.
+        teamChart1Data: { labels: [], datasets: [] },
+        teamChart2Data: { labels: [], datasets: [] },
+        teamPerformanceData: { labels: [], datasets: [] },
+        teamChart4Data: { labels: [], datasets: [] }
       };
     }
 
@@ -361,7 +371,6 @@ const App = () => {
     };
 
   }, [selectedTeam, matches, startDate, endDate]);
-
 
   // Yardımcı bileşen: Grafik Kartı
   const ChartCard = ({ title, children }) => (
@@ -640,6 +649,8 @@ const App = () => {
           border-radius: 9999px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
           transition: transform 0.2s;
+          cursor: pointer;
+          border: none;
         }
         
         .back-button:hover {
@@ -948,10 +959,8 @@ const App = () => {
                               );
                             })
                           ) : (
-                            <tr>
-                                <td colSpan="4" className="table-cell text-center italic text-gray-500">
-                                  Henüz bir maç bulunamadı.
-                                </td>
+                            <tr className="table-row">
+                              <td colSpan="4" className="table-cell text-center">Belirtilen tarih aralığında maç bulunamadı.</td>
                             </tr>
                           )}
                         </tbody>
@@ -962,18 +971,21 @@ const App = () => {
               </div>
             ) : (
               <div>
-                {/* Genel lig istatistikleri */}
+                {/* Genel Lig İstatistikleri */}
+                <div className="team-stats-header">
+                  <h2 className="team-stats-title">Genel Lig İstatistikleri</h2>
+                </div>
                 <div className="stats-grid">
                   <ChartCard title="Liglere Göre Toplam Maç Sayısı">
                     <Bar data={generalChart1Data} />
                   </ChartCard>
-                  <ChartCard title="Liglerin Galibiyet, Beraberlik, Mağlubiyet Oranları">
+                  <ChartCard title="Liglere Göre Maç Sonuçları">
                     <Bar data={generalChart2Data} />
                   </ChartCard>
-                  <ChartCard title="İlk Yarı ve İkinci Yarı Gol Oranları">
+                  <ChartCard title="İlk ve İkinci Yarı Golleri">
                     <Pie data={generalChart3Data} />
                   </ChartCard>
-                  <ChartCard title="Ülkelere Göre Maç Sayısı">
+                  <ChartCard title="Ülke Başına Maç Sayısı">
                     <Bar data={generalChart4Data} />
                   </ChartCard>
                 </div>
