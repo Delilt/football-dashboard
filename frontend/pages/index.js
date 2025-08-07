@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -11,9 +11,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-// Tailwind CSS'i doğrudan React dosyasına dahil etmiyoruz, çünkü bu derleme hatasına neden olabilir.
-// Tailwind kurulumu genellikle proje genelinde bir CSS dosyası aracılığıyla yapılır.
-import { Bar, Pie, Line, Radar } from 'react-chartjs-2';
+import { Bar, Pie, Line } from 'react-chartjs-2';
 
 // Chart.js bileşenlerini global olarak kaydediyoruz.
 ChartJS.register(
@@ -34,11 +32,15 @@ ChartJS.register(
   kaydırılabilir bir alanda gösterilmektedir. Ayrıca, maçları tarih aralığına
   göre filtreleme özelliği eklenmiştir ve bu bölüm takım istatistikleri
   grafiklerinin hemen altına taşınmıştır.
+
+  Bu sürümde, grafiklerin gereksiz yere yeniden çizilmesini önlemek için
+  React'in useMemo hook'u kullanılmıştır.
 */
 
 const API_BASE = "https://football-dashboard.onrender.com";
 
 const App = () => {
+  // State tanımlamaları
   const [matches, setMatches] = useState([]);
   const [teams, setTeams] = useState([]);
   const [searchTeam, setSearchTeam] = useState("");
@@ -47,11 +49,11 @@ const App = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [startDate, setStartDate] = useState(''); // Başlangıç tarihi için state
-  const [endDate, setEndDate] = useState('');     // Bitiş tarihi için state
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const searchInputRef = useRef(null);
 
-  // Veri çekme işlemi
+  // Veri çekme işlemi - Bileşenin ilk render'ında yalnızca bir kez çalışır.
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -79,7 +81,7 @@ const App = () => {
     if (searchTeam.length > 1) {
       const filteredSuggestions = teams
         .filter(team => team.name.toLowerCase().startsWith(searchTeam.toLowerCase()))
-        .slice(0, 5); // İlk 5 öneriyi al
+        .slice(0, 5);
       setSuggestions(filteredSuggestions);
     } else {
       setSuggestions([]);
@@ -116,7 +118,7 @@ const App = () => {
     setSelectedTeam(null);
     setSearchTeam('');
     setSuggestions([]);
-    setStartDate(''); // Tarih filtrelerini de sıfırla
+    setStartDate('');
     setEndDate('');
   };
 
@@ -148,202 +150,218 @@ const App = () => {
     );
   }
 
-  // --- Genel Ligler İçin Veri Hesaplama ---
-  const leagues = [...new Set(matches.map(m => m.league))];
+  // --- Genel Ligler İçin Veri Hesaplama (useMemo ile optimize edildi) ---
+  // Bu hesaplamalar sadece 'matches' state'i değiştiğinde tekrar çalışır.
+  const { generalChart1Data, generalChart2Data, generalChart3Data, generalChart4Data } = useMemo(() => {
+    const leagues = [...new Set(matches.map(m => m.league))];
 
-  // Genel Grafik 1: Liglerde Oynanan Maç Sayısı
-  const matchesPerLeague = leagues.reduce((acc, l) => {
-    acc[l] = matches.filter(m => m.league === l).length;
-    return acc;
-  }, {});
-  const generalChart1Data = {
-    labels: Object.keys(matchesPerLeague),
-    datasets: [{
-      label: 'Toplam Maç Sayısı',
-      data: Object.values(matchesPerLeague),
-      backgroundColor: ['#22c55e', '#3b82f6', '#f97316', '#ef4444', '#a855f7'],
-    }]
-  };
+    const matchesPerLeague = leagues.reduce((acc, l) => {
+      acc[l] = matches.filter(m => m.league === l).length;
+      return acc;
+    }, {});
+    const chart1Data = {
+      labels: Object.keys(matchesPerLeague),
+      datasets: [{
+        label: 'Toplam Maç Sayısı',
+        data: Object.values(matchesPerLeague),
+        backgroundColor: ['#22c55e', '#3b82f6', '#f97316', '#ef4444', '#a855f7'],
+      }]
+    };
 
-  // Genel Grafik 2: Liglerin Galibiyet, Beraberlik, Mağlubiyet Oranları
-  const leagueResults = leagues.map(league => {
-    const leagueMatches = matches.filter(m => m.league === league);
-    let wins = 0, draws = 0, losses = 0;
-    leagueMatches.forEach(m => {
-      // Güvenli split işlemi için null kontrolü eklendi
+    const leagueResults = leagues.map(league => {
+      const leagueMatches = matches.filter(m => m.league === league);
+      let wins = 0, draws = 0, losses = 0;
+      leagueMatches.forEach(m => {
+        const finalScore = m.final_score || '0 - 0';
+        const [h, a] = finalScore.split(' - ').map(Number);
+        if (h > a) wins++;
+        else if (h < a) losses++;
+        else draws++;
+      });
+      return { league, wins, draws, losses };
+    });
+    const chart2Data = {
+      labels: leagues,
+      datasets: [
+        { label: 'Galibiyet', data: leagueResults.map(r => r.wins), backgroundColor: '#10b981' },
+        { label: 'Beraberlik', data: leagueResults.map(r => r.draws), backgroundColor: '#f59e0b' },
+        { label: 'Mağlubiyet', data: leagueResults.map(r => r.losses), backgroundColor: '#ef4444' },
+      ]
+    };
+
+    const totalFirstHalfGoals = matches.reduce((acc, m) => {
+      const firstHalfScore = m.first_half_score || '0 - 0';
+      return acc + firstHalfScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
+    }, 0);
+    const totalSecondHalfGoals = matches.reduce((acc, m) => {
+      const finalScore = m.final_score || '0 - 0';
+      const firstHalfScore = m.first_half_score || '0 - 0';
+      const finalGoals = finalScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
+      const firstHalfGoals = firstHalfScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
+      return acc + (finalGoals - firstHalfGoals);
+    }, 0);
+    const chart3Data = {
+      labels: ['İlk Yarı Golleri', 'İkinci Yarı Golleri'],
+      datasets: [{
+        data: [totalFirstHalfGoals, totalSecondHalfGoals],
+        backgroundColor: ['#3b82f6', '#f97316'],
+        hoverOffset: 4,
+      }]
+    };
+    
+    const countries = [...new Set(matches.map(m => m.country))];
+    const matchesPerCountry = countries.reduce((acc, c) => {
+      acc[c] = matches.filter(m => m.country === c).length;
+      return acc;
+    }, {});
+    const chart4Data = {
+      labels: Object.keys(matchesPerCountry),
+      datasets: [{
+        label: 'Ülke Başına Maç Sayısı',
+        data: Object.values(matchesPerCountry),
+        backgroundColor: ['#3b82f6', '#f97316', '#a855f7'],
+      }]
+    };
+
+    return {
+      generalChart1Data: chart1Data,
+      generalChart2Data: chart2Data,
+      generalChart3Data: chart3Data,
+      generalChart4Data: chart4Data
+    };
+  }, [matches]);
+
+  // --- Takıma Özel Veri Hesaplama (useMemo ile optimize edildi) ---
+  // Bu hesaplamalar sadece 'selectedTeam', 'matches', 'startDate' veya 'endDate' değiştiğinde tekrar çalışır.
+  const { teamMatches, teamChart1Data, teamChart2Data, teamPerformanceData, teamChart4Data } = useMemo(() => {
+    if (!selectedTeam) {
+      return {
+        teamMatches: [],
+        teamChart1Data: {},
+        teamChart2Data: {},
+        teamPerformanceData: {},
+        teamChart4Data: {}
+      };
+    }
+
+    const filteredMatches = matches.filter(m => {
+      const matchDate = new Date(m.date);
+      const filterStartDate = startDate ? new Date(startDate) : null;
+      const filterEndDate = endDate ? new Date(endDate) : null;
+      
+      const isTeamMatch = m.home_team_id === selectedTeam.id || m.away_team_id === selectedTeam.id;
+      const isWithinDateRange = (!filterStartDate || matchDate >= filterStartDate) && (!filterEndDate || matchDate <= filterEndDate);
+
+      return isTeamMatch && isWithinDateRange;
+    });
+
+    const teamWinRates = filteredMatches.reduce((acc, m) => {
       const finalScore = m.final_score || '0 - 0';
       const [h, a] = finalScore.split(' - ').map(Number);
-      if (h > a) wins++;
-      else if (h < a) losses++;
-      else draws++;
-    });
-    return { league, wins, draws, losses };
-  });
-  const generalChart2Data = {
-    labels: leagues,
-    datasets: [
-      { label: 'Galibiyet', data: leagueResults.map(r => r.wins), backgroundColor: '#10b981' },
-      { label: 'Beraberlik', data: leagueResults.map(r => r.draws), backgroundColor: '#f59e0b' },
-      { label: 'Mağlubiyet', data: leagueResults.map(r => r.losses), backgroundColor: '#ef4444' },
-    ]
-  };
-
-  // Genel Grafik 3: İlk Yarı ve Final Golleri
-  const totalFirstHalfGoals = matches.reduce((acc, m) => {
-    const firstHalfScore = m.first_half_score || '0 - 0';
-    return acc + firstHalfScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
-  }, 0);
-  const totalSecondHalfGoals = matches.reduce((acc, m) => {
-    const finalScore = m.final_score || '0 - 0';
-    const firstHalfScore = m.first_half_score || '0 - 0';
-    const finalGoals = finalScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
-    const firstHalfGoals = firstHalfScore.split(' - ').map(Number).reduce((sum, g) => sum + g, 0);
-    return acc + (finalGoals - firstHalfGoals);
-  }, 0);
-  const generalChart3Data = {
-    labels: ['İlk Yarı Golleri', 'İkinci Yarı Golleri'],
-    datasets: [{
-      data: [totalFirstHalfGoals, totalSecondHalfGoals],
-      backgroundColor: ['#3b82f6', '#f97316'],
-      hoverOffset: 4,
-    }]
-  };
-  
-  // Genel Grafik 4: Ülkelere Göre Maç Sayısı
-  const countries = [...new Set(matches.map(m => m.country))];
-  const matchesPerCountry = countries.reduce((acc, c) => {
-    acc[c] = matches.filter(m => m.country === c).length;
-    return acc;
-  }, {});
-  const generalChart4Data = {
-    labels: Object.keys(matchesPerCountry),
-    datasets: [{
-      label: 'Ülke Başına Maç Sayısı',
-      data: Object.values(matchesPerCountry),
-      backgroundColor: ['#3b82f6', '#f97316', '#a855f7'],
-    }]
-  };
-
-
-  // --- Takıma Özel Veri Hesaplama ---
-  // Tarih filtrelerini de kullanarak maçları filtrele
-  const teamMatches = selectedTeam ? matches.filter(m => {
-    const matchDate = new Date(m.date);
-    const filterStartDate = startDate ? new Date(startDate) : null;
-    const filterEndDate = endDate ? new Date(endDate) : null;
+      if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
+        acc.wins++;
+      } else if (h === a) {
+        acc.draws++;
+      } else {
+        acc.losses++;
+      }
+      return acc;
+    }, { wins: 0, draws: 0, losses: 0 });
     
-    // Hem takım filtresi hem de tarih filtresi uygulanır
-    const isTeamMatch = m.home_team_id === selectedTeam.id || m.away_team_id === selectedTeam.id;
-    const isWithinDateRange = (!filterStartDate || matchDate >= filterStartDate) && (!filterEndDate || matchDate <= filterEndDate);
+    const monthlyGoals = filteredMatches.reduce((acc, m) => {
+      const matchDate = new Date(m.date);
+      const month = matchDate.toLocaleString('tr-TR', { month: 'long' });
+      const finalScore = m.final_score || '0 - 0';
+      const goals = m.home_team_id === selectedTeam.id ? +finalScore.split(' - ')[0] : +finalScore.split(' - ')[1];
+      if (acc[month]) {
+        acc[month] += goals;
+      } else {
+        acc[month] = goals;
+      }
+      return acc;
+    }, {});
+    
+    const sortedMonthlyGoals = Object.keys(monthlyGoals)
+      .sort((a, b) => new Date(`01 ${a} 2020`).getMonth() - new Date(`01 ${b} 2020`).getMonth())
+      .map(month => ({ month, goals: monthlyGoals[month] }));
 
-    return isTeamMatch && isWithinDateRange;
-  }) : [];
-  
-  // Takıma özel galibiyet, beraberlik, mağlubiyet verileri
-  const teamWinRates = selectedTeam ? teamMatches.reduce((acc, m) => {
-    const finalScore = m.final_score || '0 - 0';
-    const [h, a] = finalScore.split(' - ').map(Number);
-    if ((m.home_team_id === selectedTeam.id && h > a) || (m.away_team_id === selectedTeam.id && a > h)) {
-      acc.wins++;
-    } else if (h === a) {
-      acc.draws++;
-    } else {
-      acc.losses++;
-    }
-    return acc;
-  }, { wins: 0, draws: 0, losses: 0 }) : { wins: 0, draws: 0, losses: 0 };
-  
-  // Takıma özel aylık goller
-  const monthlyGoals = selectedTeam ? teamMatches.reduce((acc, m) => {
-    const matchDate = new Date(m.date);
-    const month = matchDate.toLocaleString('tr-TR', { month: 'long' });
-    const finalScore = m.final_score || '0 - 0';
-    const goals = m.home_team_id === selectedTeam.id ? +finalScore.split(' - ')[0] : +finalScore.split(' - ')[1];
-    if (acc[month]) {
-      acc[month] += goals;
-    } else {
-      acc[month] = goals;
-    }
-    return acc;
-  }, {}) : {};
+    const homeWins = filteredMatches.filter(m => {
+      const finalScore = m.final_score || '0 - 0';
+      return m.home_team_id === selectedTeam.id && +finalScore.split(' - ')[0] > +finalScore.split(' - ')[1];
+    }).length;
+    const awayWins = filteredMatches.filter(m => {
+      const finalScore = m.final_score || '0 - 0';
+      return m.away_team_id === selectedTeam.id && +finalScore.split(' - ')[1] > +finalScore.split(' - ')[0];
+    }).length;
+    const homeLosses = filteredMatches.filter(m => {
+      const finalScore = m.final_score || '0 - 0';
+      return m.home_team_id === selectedTeam.id && +finalScore.split(' - ')[0] < +finalScore.split(' - ')[1];
+    }).length;
+    const awayLosses = filteredMatches.filter(m => {
+      const finalScore = m.final_score || '0 - 0';
+      return m.away_team_id === selectedTeam.id && +finalScore.split(' - ')[1] < +finalScore.split(' - ')[0];
+    }).length;
+    
+    const teamFirstHalfGoals = filteredMatches.reduce((acc, m) => {
+      const firstHalfScore = m.first_half_score || '0 - 0';
+      return acc + (m.home_team_id === selectedTeam.id ? +firstHalfScore.split(' - ')[0] : +firstHalfScore.split(' - ')[1]);
+    }, 0);
+    const teamSecondHalfGoals = filteredMatches.reduce((acc, m) => {
+      const finalScore = m.final_score || '0 - 0';
+      const firstHalfScore = m.first_half_score || '0 - 0';
+      const teamFinalGoals = m.home_team_id === selectedTeam.id ? +finalScore.split(' - ')[0] : +finalScore.split(' - ')[1];
+      const teamFirstHalfGoals = m.home_team_id === selectedTeam.id ? +firstHalfScore.split(' - ')[0] : +firstHalfScore.split(' - ')[1];
+      return acc + (teamFinalGoals - teamFirstHalfGoals);
+    }, 0);
 
-  // Aylık gol verilerini doğru sırayla al
-  const sortedMonthlyGoals = Object.keys(monthlyGoals)
-    .sort((a, b) => new Date(`01 ${a} 2020`).getMonth() - new Date(`01 ${b} 2020`).getMonth())
-    .map(month => ({ month, goals: monthlyGoals[month] }));
+    const chart1Data = {
+      labels: ['Galibiyet', 'Beraberlik', 'Mağlubiyet'],
+      datasets: [{
+        data: [teamWinRates.wins, teamWinRates.draws, teamWinRates.losses],
+        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+        hoverOffset: 4,
+      }]
+    };
 
-  // Takıma özel ev ve deplasman performansı verileri
-  const homeWins = teamMatches.filter(m => {
-    const finalScore = m.final_score || '0 - 0';
-    return m.home_team_id === selectedTeam.id && +finalScore.split(' - ')[0] > +finalScore.split(' - ')[1];
-  }).length;
-  const awayWins = teamMatches.filter(m => {
-    const finalScore = m.final_score || '0 - 0';
-    return m.away_team_id === selectedTeam.id && +finalScore.split(' - ')[1] > +finalScore.split(' - ')[0];
-  }).length;
-  const homeLosses = teamMatches.filter(m => {
-    const finalScore = m.final_score || '0 - 0';
-    return m.home_team_id === selectedTeam.id && +finalScore.split(' - ')[0] < +finalScore.split(' - ')[1];
-  }).length;
-  const awayLosses = teamMatches.filter(m => {
-    const finalScore = m.final_score || '0 - 0';
-    return m.away_team_id === selectedTeam.id && +finalScore.split(' - ')[1] < +finalScore.split(' - ')[0];
-  }).length;
-  
-  // Takıma özel ilk yarı ve ikinci yarı golleri
-  const teamFirstHalfGoals = teamMatches.reduce((acc, m) => {
-    const firstHalfScore = m.first_half_score || '0 - 0';
-    return acc + (m.home_team_id === selectedTeam.id ? +firstHalfScore.split(' - ')[0] : +firstHalfScore.split(' - ')[1]);
-  }, 0);
-  const teamSecondHalfGoals = teamMatches.reduce((acc, m) => {
-    const finalScore = m.final_score || '0 - 0';
-    const firstHalfScore = m.first_half_score || '0 - 0';
-    const teamFinalGoals = m.home_team_id === selectedTeam.id ? +finalScore.split(' - ')[0] : +finalScore.split(' - ')[1];
-    const teamFirstHalfGoals = m.home_team_id === selectedTeam.id ? +firstHalfScore.split(' - ')[0] : +firstHalfScore.split(' - ')[1];
-    return acc + (teamFinalGoals - teamFirstHalfGoals);
-  }, 0);
+    const chart2Data = {
+      labels: sortedMonthlyGoals.map(item => item.month),
+      datasets: [{
+        label: 'Atılan Goller',
+        data: sortedMonthlyGoals.map(item => item.goals),
+        fill: false,
+        borderColor: '#3b82f6',
+        tension: 0.3,
+      }]
+    };
 
-  // Takıma Özel Grafik 1: Galibiyet, Beraberlik, Mağlubiyet Oranı
-  const teamChart1Data = {
-    labels: ['Galibiyet', 'Beraberlik', 'Mağlubiyet'],
-    datasets: [{
-      data: [teamWinRates.wins, teamWinRates.draws, teamWinRates.losses],
-      backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-      hoverOffset: 4,
-    }]
-  };
+    const performanceData = {
+      labels: ['Ev', 'Deplasman'],
+      datasets: [
+        { label: 'Galibiyet', data: [homeWins, awayWins], backgroundColor: '#10b981' },
+        { label: 'Mağlubiyet', data: [homeLosses, awayLosses], backgroundColor: '#ef4444' },
+      ]
+    };
 
-  // Takıma Özel Grafik 2: Aylık Atılan Goller
-  const teamChart2Data = {
-    labels: sortedMonthlyGoals.map(item => item.month),
-    datasets: [{
-      label: 'Atılan Goller',
-      data: sortedMonthlyGoals.map(item => item.goals),
-      fill: false,
-      borderColor: '#3b82f6',
-      tension: 0.3,
-    }]
-  };
+    const chart4Data = {
+      labels: ['İlk Yarı', 'İkinci Yarı'],
+      datasets: [{
+        label: 'Atılan Goller',
+        data: [teamFirstHalfGoals, teamSecondHalfGoals],
+        backgroundColor: ['#f97316', '#3b82f6'],
+        hoverOffset: 4,
+      }]
+    };
 
-  // Takıma Özel Grafik 3: Ev ve Deplasman Performansı (Galibiyet/Mağlubiyet)
-  const teamPerformanceData = {
-    labels: ['Ev', 'Deplasman'],
-    datasets: [
-      { label: 'Galibiyet', data: [homeWins, awayWins], backgroundColor: '#10b981' },
-      { label: 'Mağlubiyet', data: [homeLosses, awayLosses], backgroundColor: '#ef4444' },
-    ]
-  };
+    return {
+      teamMatches: filteredMatches,
+      teamChart1Data: chart1Data,
+      teamChart2Data: chart2Data,
+      teamPerformanceData: performanceData,
+      teamChart4Data: chart4Data
+    };
 
-  // Takıma Özel Grafik 4: İlk Yarı ve İkinci Yarı Golleri
-  const teamChart4Data = {
-    labels: ['İlk Yarı', 'İkinci Yarı'],
-    datasets: [{
-      label: 'Atılan Goller',
-      data: [teamFirstHalfGoals, teamSecondHalfGoals],
-      backgroundColor: ['#f97316', '#3b82f6'],
-      hoverOffset: 4,
-    }]
-  };
+  }, [selectedTeam, matches, startDate, endDate]);
+
 
   // Yardımcı bileşen: Grafik Kartı
   const ChartCard = ({ title, children }) => (
@@ -761,6 +779,7 @@ const App = () => {
           border: 2px solid var(--border-color); /* Tailwind'deki border-solid border-2 border-gray-200'e karşılık gelir */
           transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
           background-color: var(--card-bg-color);
+          color: var(--text-color);
         }
 
         .date-input-group {
@@ -931,7 +950,7 @@ const App = () => {
                           ) : (
                             <tr>
                                 <td colSpan="4" className="table-cell text-center italic text-gray-500">
-                                    Seçilen tarih aralığında maç bulunamadı.
+                                  Henüz bir maç bulunamadı.
                                 </td>
                             </tr>
                           )}
@@ -942,20 +961,22 @@ const App = () => {
                 </div>
               </div>
             ) : (
-              // Genel ligler görünümü
-              <div className="stats-grid">
-                <ChartCard title="Liglere Göre Toplam Maç Sayısı">
-                  <Bar data={generalChart1Data} />
-                </ChartCard>
-                <ChartCard title="Liglerin Galibiyet/Beraberlik/Mağlubiyet Oranları">
-                  <Bar data={generalChart2Data} />
-                </ChartCard>
-                <ChartCard title="İlk Yarı ve İkinci Yarı Gol Oranları">
-                  <Pie data={generalChart3Data} />
-                </ChartCard>
-                <ChartCard title="Ülkelere Göre Maç Dağılımı">
-                  <Bar data={generalChart4Data} />
-                </ChartCard>
+              <div>
+                {/* Genel lig istatistikleri */}
+                <div className="stats-grid">
+                  <ChartCard title="Liglere Göre Toplam Maç Sayısı">
+                    <Bar data={generalChart1Data} />
+                  </ChartCard>
+                  <ChartCard title="Liglerin Galibiyet, Beraberlik, Mağlubiyet Oranları">
+                    <Bar data={generalChart2Data} />
+                  </ChartCard>
+                  <ChartCard title="İlk Yarı ve İkinci Yarı Gol Oranları">
+                    <Pie data={generalChart3Data} />
+                  </ChartCard>
+                  <ChartCard title="Ülkelere Göre Maç Sayısı">
+                    <Bar data={generalChart4Data} />
+                  </ChartCard>
+                </div>
               </div>
             )}
           </div>
@@ -963,6 +984,6 @@ const App = () => {
       </div>
     </>
   );
-}
+};
 
 export default App;
